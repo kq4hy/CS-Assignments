@@ -12,6 +12,8 @@ public class JKRobot extends Robot{
 	private Point end_pos;
 	private int cols;
 	private int rows;
+	private int direc_x;
+	private int direc_y;
 	private ArrayList<Block> open_list = new ArrayList<Block>();
 	private ArrayList<Block> closed_list = new ArrayList<Block>();
 	private ArrayList<Integer> open_totals = new ArrayList<Integer>();
@@ -27,6 +29,8 @@ public class JKRobot extends Robot{
         end_pos = world.getEndPos();
         is_uncertain = world.getUncertain();
         world_map = new Block[rows][cols];
+        direc_x = 0;
+        direc_y = 0;
         super.addToWorld(world); 
     }
     
@@ -55,26 +59,27 @@ public class JKRobot extends Robot{
 			}
 		}
 		
+		/**  TESTING HEURISTIC CALCULATIONS
+		for(int vert = 0; vert < rows; vert++) {
+			System.out.print("[");
+			for(int horiz = 0; horiz < cols; horiz++) {
+				System.out.print(world_map[vert][horiz].getHeuristic() + ", ");
+			}
+			System.out.print("]\n");
+		} **/
+		
     	if(is_uncertain) {
     		Block current_block = world_map[start_x][start_y];
-    		String direction = calc_direc(start_x, start_y, finish_x, finish_y);
-    		System.out.println(direction);
-    		while(current_block.getX() != finish_x && current_block.getY() != finish_y) {	
-				break;
+    		calc_direc(start_x, start_y, finish_x, finish_y); // calculate which direction is ideal
+    		while(current_block.getX() != finish_x || current_block.getY() != finish_y) {
+    			int current_x = current_block.getX();
+    			int current_y = current_block.getY();
+				super.move(new Point(current_x + direc_x, current_y + direc_y)); // start traveling in that direction
+				current_block = world_map[current_x + direc_x][current_y + direc_y];
+				// if you cannot move in that direction then ping the map until you find the first opening and go that way
+				// re-ping each move to figure out if there's an opening
 			}
-    		// figure out which direction you ideally want to travel in
-    		// start traveling in that direction
-    		// if you cannot, then ping the map to determine which way to travel
     	} else {
-    		/**  TESTING HEURISTIC CALCULATIONS
-    		for(int vert = 0; vert < rows; vert++) {
-    			System.out.print("[");
-    			for(int horiz = 0; horiz < cols; horiz++) {
-    				System.out.print(world_map[vert][horiz].getHeuristic() + ", ");
-    			}
-    			System.out.print("]\n");
-    		} **/
-
     		closed_list.add(world_map[start_x][start_y]); // add initial starting position to closed list
     		add_adjacent_blocks(start_x, start_y, cols, rows); // add adjacent positions to open list
     		while(open_list.size() > 0) { // while open list is not empty
@@ -104,23 +109,27 @@ public class JKRobot extends Robot{
     }
     
     // calculate the direction that robot wants to travel to reach destination
-    public String calc_direc(int curr_x, int curr_y, int final_x, int final_y) {
+    public void calc_direc(int curr_x, int curr_y, int final_x, int final_y) {
 		if(final_x == curr_x) { // ideally go vertical
 			if(final_y - curr_y < 0)
-				return "West";
-			return "East";
+				set_direction("West");
+			else 
+				set_direction("East");
 		} else if(final_y == curr_y) { // ideally go horizontal
 			if(final_x - curr_x < 0) 
-				return "North";
-			return "South";
+				set_direction("North");
+			else
+				set_direction("South");
 		} else if(final_x - curr_x < 0) {
 			if(final_y - curr_y < 0)
-				return "Northwest";
-			return "Northeast";
+				set_direction("Northwest");
+			else
+				set_direction("Northeast");
 		} else {
 			if(final_y - curr_y < 0) 
-				return "Southwest";
-			return "Southeast";
+				set_direction("Southwest");
+			else
+				set_direction("Southeast");
 		}
     }
     
@@ -163,6 +172,36 @@ public class JKRobot extends Robot{
     	System.out.println(""); */
     }
     
+    // sets the direction for x and y depending on which direction you want to travel in
+    public void set_direction(String direc) { 
+    	System.out.println(direc);
+    	if(direc.equals("North")) {
+    		direc_x = -1;
+    		direc_y = 0;
+    	} else if(direc.equals("South")) {
+    		direc_x = 1;
+    		direc_y = 0;
+    	} else if(direc.equals("West")) {
+    		direc_x = 0;
+    		direc_y = -1;
+    	} else if(direc.equals("East")) {
+    		direc_x = 0;
+    		direc_y = 1;
+    	} else if(direc.equals("Northwest")) {
+    		direc_x = -1;
+    		direc_y = -1;
+    	} else if(direc.equals("Northeast")) {
+    		direc_x = -1;
+    		direc_y = 1;
+    	} else if(direc.equals("Southwest")) {
+    		direc_x = 1;
+    		direc_y = -1;
+    	} else if(direc.equals("Southeast")) {
+    		direc_x = 1;
+    		direc_y = 1;
+    	}
+    }
+    
     public Block get_block(int x, int y) { // returns the block associated with the x and y
     	return world_map[x][y];
     }
@@ -173,7 +212,7 @@ public class JKRobot extends Robot{
     
     public static void main(String[] args) {
         try{
-            World myWorld = new World("TestCases/myInputFile4.txt", false);
+            World myWorld = new World("TestCases/myInputFile2.txt", true);
             JKRobot myRobot = new JKRobot();
             myWorld.createGUI(700, 500, 300);
             myRobot.addToWorld(myWorld);
