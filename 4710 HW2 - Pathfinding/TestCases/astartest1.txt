@@ -1,0 +1,6 @@
+S X X O X X X O X X F
+O X O X O X O X O X O
+O X O X O X O X O X O
+O X O X O X O X O X O
+O X O X O X O X O X O
+X O X X X O X X X O X
