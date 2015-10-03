@@ -76,8 +76,11 @@ public class JKRobot extends Robot{
     			int current_y = current_block.getY();
 				super.move(new Point(current_x + direc_x, current_y + direc_y)); // start traveling in that direction
 				current_block = world_map[current_x + direc_x][current_y + direc_y];
-				// if you cannot move in that direction then ping the map until you find the first opening and go that way
-				// re-ping each move to figure out if there's an opening
+				if(current_block.getX() == current_x && current_block.getY() == current_y) { // did not move so implement logic here
+					
+					// if you cannot move in that direction then ping the map until you find the first opening and go that way
+					// re-ping each move to figure out if there's an opening	
+				}
 			}
     	} else {
     		closed_list.add(world_map[start_x][start_y]); // add initial starting position to closed list
