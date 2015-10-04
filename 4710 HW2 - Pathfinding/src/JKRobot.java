@@ -226,72 +226,93 @@ public class JKRobot extends Robot{
     public String set_ping_direc(String opt_direc, int curr_x, int curr_y) { 
     	System.out.println("Current x: " + curr_x + " , Current y: " + curr_y + ", Optimal direction is: " + opt_direc);
     	boolean open_spot = false;
-    	int index = 1;
+    	int index_vert = 1;
+    	int index_horiz = 1;
     	while(!open_spot) {
     		if(opt_direc.equals("North") || opt_direc.equals("South") ) { // trying to go North or South, check East and West
-    			if(curr_y - index < 0 && curr_y + index > cols) 
-    				index = 0;
-    			else if(curr_y - index < 0)
+    			if(curr_y - index_horiz < 0 && curr_y + index_horiz > cols) // can't go East or West anymore
+    				index_horiz = 1;
+    			else if(curr_y - index_horiz < 0)
     				return "East";
     			else
     				return "West";
-    			String east = pingMap(new Point(curr_x, curr_y + index));
-    			String west = pingMap(new Point(curr_x, curr_y - index));
+    			String east = pingMap(new Point(curr_x, curr_y + index_horiz));
+    			String west = pingMap(new Point(curr_x, curr_y - index_horiz));
     			if(east.equals("X") && west.equals("X")) {
-    				index++;
+    				index_horiz++;
     				continue;
     			} else if(east.equals("O") && west.equals("O")) {
-    				index++;
-    				continue;
-    			} else if(east.equals("O")){
+    				if((int)(Math.random() * 2) == 0)
+    					return "West";
     				return "East";
-    			} else {
-    				return "West";
-    			}
-    		} else if(opt_direc.equals("West") || opt_direc.equals("East")) { //trying to go East or West, check North and South
-    			if(curr_x - index < 0 && curr_x + index > rows) 
-    				index = 0;
-    			else if(curr_x - index < 0)
-    				return "South";
-    			else if(curr_x + index > rows)
-    				return "North";
-    			String north = pingMap(new Point(curr_x - index, curr_y));
-//    			System.out.println("North is: " + north + " with a boolean value of: " + get_boolean(north));
-    			String south = pingMap(new Point(curr_x + index, curr_y));
-//    			System.out.println("South is: " + south + " with a boolean value of: " + get_boolean(south));
-    			if(north.equals("X") && south.equals("X")) {
-    				index++;
-    				continue;
-    			} else if(north.equals("O") && south.equals("O")) {
-    				index++;
-    				continue;
-    			} else if(north.equals("O")){
-    				return "North";
-    			} else {
-    				return "South";
-    			}
-    		} else if(opt_direc.equals("Southwest")) {
-    			if(curr_y - index < 0 && curr_y + index > cols) 
-    				index = 0;
-    			else if(curr_y - index < 0)
+    			} else if(east.equals("O"))
     				return "East";
     			else
     				return "West";
-    			String south = pingMap(new Point(curr_x + index, curr_y));
-    			String west = pingMap(new Point(curr_x, curr_y - index));
-    			if(index == 1 && south.equals("O") && opt_direc.equals("Southwest"))
+    		} else if(opt_direc.equals("West") || opt_direc.equals("East")) { //trying to go East or West, check North and South
+    			if(curr_x - index_vert < 0 && curr_x + index_vert > rows) // can't go North or South anymore
+    				index_vert = 1;
+    			else if(curr_x - index_vert < 0)
+    				return "South";
+    			else if(curr_x + index_vert > rows)
+    				return "North";
+    			String north = pingMap(new Point(curr_x - index_vert, curr_y));
+    			String south = pingMap(new Point(curr_x + index_vert, curr_y));
+    			if(north.equals("X") && south.equals("X")) {
+    				index_vert++;
+    				continue;
+    			} else if(north.equals("O") && south.equals("O")) {
+    				if((int)(Math.random() * 2) == 0)
+    					return "North";
+    				return "South";
+    			} else if(north.equals("O"))
+    				return "North";
+    			else
+    				return "South";
+    		} else {
+    			String west = null;
+    			String east = null;
+    			String north = null;
+    			String south = null;
+    			if(curr_y - index_horiz < 0 && curr_y + index_horiz > cols && curr_x - index_vert < 0 && curr_x + index_vert > rows) { 
+    				index_vert = 1;
+    				index_horiz = 1;
+    			}
+    			else if(curr_x - index_vert < 0 && curr_x + index_vert > rows) { // can't go North or South anymore, check only East and West
+    				if(curr_y - index_horiz < 0)
+    					return "East";
+    				else if(curr_y + index_horiz > cols)
+    					return "West";
+	    			west = pingMap(new Point(curr_x, curr_y - index_horiz));
+	    			east = pingMap(new Point(curr_x, curr_y + index_horiz));
+    			}
+    			else if(curr_y - index_horiz < 0 && curr_y + index_horiz > cols) { // can't go East or West anymore, check only North and South
+    				if(curr_x - index_vert < 0)
+    					return "South";
+    				else if(curr_x + index_vert > rows) 
+    					return "North";
+    				north = pingMap(new Point(curr_x + index_vert, curr_y));
+        			south = pingMap(new Point(curr_x - index_vert, curr_y));
+    			}
+    			else if()
+    			else
+    				index_vert = 1;
+    				index_horiz = 1;
+    			String north = pingMap(new Point(curr_x + index_vert, curr_y));
+    			String south = pingMap(new Point(curr_x - index_vert, curr_y));
+    			String west = pingMap(new Point(curr_x, curr_y - index_horiz));
+    			String east = pingMap(new Point(curr_x, curr_y + index_horiz));
+    			if(index == 1 && vert.equals("O") && opt_direc.equals("Southwest"))
     				return "South"; // special case where opening is underneath current spot
-    			if(south.equals("X") && west.equals("X")) {
+    			if(vert.equals("X") && horiz.equals("X")) {
     				index++;
     				continue;
-    			} else if(south.equals("O") && west.equals("O")) {
+    			} else if(vert.equals("O") && horiz.equals("O")) {
     				return "East";
-    			} else if(south.equals("O"))
+    			} else if(vert.equals("O"))
     				return "East";
     			else 
     				return "West";
-    		} else if(opt_direc.equals("Southeast")) {
-
     		}
     	}
     	return "";
