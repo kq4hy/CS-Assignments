@@ -70,16 +70,19 @@ public class JKRobot extends Robot{
 		
     	if(is_uncertain) {
     		Block current_block = world_map[start_x][start_y];
-    		calc_direc(start_x, start_y, finish_x, finish_y); // calculate which direction is ideal
+    		String direction = calc_direc(start_x, start_y, finish_x, finish_y); // calculate which direction is ideal
     		while(current_block.getX() != finish_x || current_block.getY() != finish_y) {
     			int current_x = current_block.getX();
     			int current_y = current_block.getY();
 				super.move(new Point(current_x + direc_x, current_y + direc_y)); // start traveling in that direction
-				current_block = world_map[current_x + direc_x][current_y + direc_y];
 				if(current_block.getX() == current_x && current_block.getY() == current_y) { // did not move so implement logic here
-					
+					System.out.println("Same spot");
+					String move_direc = set_ping_direc(direction, current_x + direc_x, current_y + direc_y);
+					System.out.println("First opening is: " + move_direc);
 					// if you cannot move in that direction then ping the map until you find the first opening and go that way
 					// re-ping each move to figure out if there's an opening	
+				} else { // was able to move successfully
+					current_block = world_map[current_x + direc_x][current_y + direc_y];
 				}
 			}
     	} else {
@@ -112,28 +115,42 @@ public class JKRobot extends Robot{
     }
     
     // calculate the direction that robot wants to travel to reach destination
-    public void calc_direc(int curr_x, int curr_y, int final_x, int final_y) {
+    public String calc_direc(int curr_x, int curr_y, int final_x, int final_y) {
+    	String direction = "";
 		if(final_x == curr_x) { // ideally go vertical
-			if(final_y - curr_y < 0)
+			if(final_y - curr_y < 0) {
 				set_direction("West");
-			else 
+				direction = "West";
+			} else {
 				set_direction("East");
+				direction = "East";
+			}
 		} else if(final_y == curr_y) { // ideally go horizontal
-			if(final_x - curr_x < 0) 
+			if(final_x - curr_x < 0) { 
 				set_direction("North");
-			else
+				direction = "North";
+			} else {
 				set_direction("South");
+				direction = "South";
+			}
 		} else if(final_x - curr_x < 0) {
-			if(final_y - curr_y < 0)
+			if(final_y - curr_y < 0) {
 				set_direction("Northwest");
-			else
+				direction = "Northwest";
+			} else {
 				set_direction("Northeast");
+				direction = "Northeast";
+			}
 		} else {
-			if(final_y - curr_y < 0) 
+			if(final_y - curr_y < 0) {
 				set_direction("Southwest");
-			else
+				direction = "Southwest";
+			} else {
 				set_direction("Southeast");
+				direction = "Southeast";
+			}
 		}
+		return direction;
     }
     
     // calculates the adjacent blocks and adds them to open_list
@@ -205,6 +222,85 @@ public class JKRobot extends Robot{
     	}
     }
     
+    // ping depending on the direction you want to travel, returns the direction of first opening
+    public String set_ping_direc(String opt_direc, int curr_x, int curr_y) { 
+    	System.out.println("Current x: " + curr_x + " , Current y: " + curr_y + ", Optimal direction is: " + opt_direc);
+    	boolean open_spot = false;
+    	int index = 1;
+    	while(!open_spot) {
+    		if(opt_direc.equals("North") || opt_direc.equals("South") ) { // trying to go North or South, check East and West
+    			if(curr_y - index < 0 && curr_y + index > cols) 
+    				index = 0;
+    			else if(curr_y - index < 0)
+    				return "East";
+    			else
+    				return "West";
+    			String east = pingMap(new Point(curr_x, curr_y + index));
+    			String west = pingMap(new Point(curr_x, curr_y - index));
+    			if(east.equals("X") && west.equals("X")) {
+    				index++;
+    				continue;
+    			} else if(east.equals("O") && west.equals("O")) {
+    				index++;
+    				continue;
+    			} else if(east.equals("O")){
+    				return "East";
+    			} else {
+    				return "West";
+    			}
+    		} else if(opt_direc.equals("West") || opt_direc.equals("East")) { //trying to go East or West, check North and South
+    			if(curr_x - index < 0 && curr_x + index > rows) 
+    				index = 0;
+    			else if(curr_x - index < 0)
+    				return "South";
+    			else if(curr_x + index > rows)
+    				return "North";
+    			String north = pingMap(new Point(curr_x - index, curr_y));
+//    			System.out.println("North is: " + north + " with a boolean value of: " + get_boolean(north));
+    			String south = pingMap(new Point(curr_x + index, curr_y));
+//    			System.out.println("South is: " + south + " with a boolean value of: " + get_boolean(south));
+    			if(north.equals("X") && south.equals("X")) {
+    				index++;
+    				continue;
+    			} else if(north.equals("O") && south.equals("O")) {
+    				index++;
+    				continue;
+    			} else if(north.equals("O")){
+    				return "North";
+    			} else {
+    				return "South";
+    			}
+    		} else if(opt_direc.equals("Southwest")) {
+    			if(curr_y - index < 0 && curr_y + index > cols) 
+    				index = 0;
+    			else if(curr_y - index < 0)
+    				return "East";
+    			else
+    				return "West";
+    			String south = pingMap(new Point(curr_x + index, curr_y));
+    			String west = pingMap(new Point(curr_x, curr_y - index));
+    			if(index == 1 && south.equals("O") && opt_direc.equals("Southwest"))
+    				return "South"; // special case where opening is underneath current spot
+    			if(south.equals("X") && west.equals("X")) {
+    				index++;
+    				continue;
+    			} else if(south.equals("O") && west.equals("O")) {
+    				return "East";
+    			} else if(south.equals("O"))
+    				return "East";
+    			else 
+    				return "West";
+    		} else if(opt_direc.equals("Southeast")) {
+
+    		}
+    	}
+    	return "";
+    }
+    
+    public boolean get_boolean(String guess) {
+    	return guess.equals("X");
+    }
+    
     public Block get_block(int x, int y) { // returns the block associated with the x and y
     	return world_map[x][y];
     }
@@ -215,9 +311,9 @@ public class JKRobot extends Robot{
     
     public static void main(String[] args) {
         try{
-            World myWorld = new World("TestCases/myInputFile2.txt", true);
+            World myWorld = new World("TestCases/myInputFile5.txt", true);
             JKRobot myRobot = new JKRobot();
-            myWorld.createGUI(700, 500, 300);
+            myWorld.createGUI(700, 500, 1000);
             myRobot.addToWorld(myWorld);
             myRobot.travelToDestination();
         }
