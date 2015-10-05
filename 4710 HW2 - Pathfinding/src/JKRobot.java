@@ -14,6 +14,10 @@ public class JKRobot extends Robot{
 	private int rows;
 	private int direc_x;
 	private int direc_y;
+	private int start_x;
+	private int start_y;
+	private int finish_x;
+	private int finish_y;
 	private ArrayList<Block> open_list = new ArrayList<Block>();
 	private ArrayList<Block> closed_list = new ArrayList<Block>();
 	private ArrayList<Integer> open_totals = new ArrayList<Integer>();
@@ -36,10 +40,10 @@ public class JKRobot extends Robot{
     
     @Override
     public void travelToDestination() {
-    	int start_x = (int)start_pos.getX();
-		int start_y = (int)start_pos.getY();
-		int finish_x = (int)end_pos.getX();
-		int finish_y = (int)end_pos.getY();
+    	start_x = (int)start_pos.getX();
+		start_y = (int)start_pos.getY();
+		finish_x = (int)end_pos.getX();
+		finish_y = (int)end_pos.getY();
 		
 		// set up world_map with blocks containing the heuristics 
 		for(int vert = 0; vert < rows; vert++) {
@@ -69,32 +73,21 @@ public class JKRobot extends Robot{
 		} **/
 		
     	if(is_uncertain) {
-    		Block current_block = world_map[start_x][start_y];
+    		int current_x = (int)(getPosition().getX());
+			int current_y = (int)(getPosition().getY());
     		String direction = calc_direc(start_x, start_y, finish_x, finish_y); // calculate which direction is ideal
-    		while(current_block.getX() != finish_x || current_block.getY() != finish_y) {
-    			int current_x = current_block.getX();
-    			int current_y = current_block.getY();
+    		while(current_x != finish_x || current_y != finish_y) {
     			Point new_spot = super.move(new Point(current_x + direc_x, current_y + direc_y)); // start traveling in that direction
-				if(new_spot.getX() == current_x && new_spot.getY() == current_y) { // did not move so implement logic here
-					String move_direc = set_ping_direc(direction, current_x + direc_x, current_y + direc_y);
+				if(new_spot.getX() == current_x && new_spot.getY() == current_y) { // did not move
+					String move_direc = set_ping_direc(direction, current_x + direc_x, current_y + direc_y, current_x, current_y);
 					System.out.println("First opening is: " + move_direc);
-					if(move_direc.equals("North")) {
-						super.move(new Point(current_x - 1, current_y));
-						current_block = world_map[current_x - 1][current_y];
-					} else if(move_direc.equals("South")) {
-						super.move(new Point(current_x + 1, current_y));
-						current_block = world_map[current_x + 1][current_y];
-					} else if(move_direc.equals("West")) {
-						super.move(new Point(current_x, current_y - 1));
-						current_block = world_map[current_x][current_y - 1];
-					} else if(move_direc.equals("East")) {
-						super.move(new Point(current_x, current_y + 1));
-						current_block = world_map[current_x][current_y + 1];
-					}
-				} else {
-					current_block = world_map[current_x + direc_x][current_y + direc_y];
+					set_direction(move_direc);
+					super.move(new Point(current_x + direc_x, current_y + direc_y));
 				}
-				direction = calc_direc(current_block.getX(), current_block.getY(), finish_x, finish_y);
+				current_x = (int)(getPosition().getX());
+    			current_y = (int)(getPosition().getY());
+    			world_map[current_x][current_y].setHeuristic(-10);
+				direction = calc_direc(current_x, current_y, finish_x, finish_y);
     		}
     	} else {
     		closed_list.add(world_map[start_x][start_y]); // add initial starting position to closed list
@@ -234,78 +227,137 @@ public class JKRobot extends Robot{
     }
     
     // ping depending on the direction you want to travel, returns the direction of first opening
-    public String set_ping_direc(String opt_direc, int curr_x, int curr_y) { 
+    public String set_ping_direc(String opt_direc, int curr_x, int curr_y, int robot_x, int robot_y) { 
     	System.out.println("Current x: " + curr_x + " , Current y: " + curr_y + ", Optimal direction is: " + opt_direc);
     	boolean open_spot = false;
     	int index_vert = 1;
     	int index_horiz = 1;
     	while(!open_spot) {
-    		if(opt_direc.equals("North") || opt_direc.equals("South") ) { // trying to go North or South, check East and West
+    		String west = "";
+    		String east = "";
+    		String north = "";
+    		String south = "";
+    		boolean east_obstacle = false;
+    		boolean west_obstacle = false;
+    		boolean north_obstacle = false;
+    		boolean south_obstacle = false;
+    		
+    		// trying to go North or South, check East and West
+    		if(opt_direc.equals("North") || opt_direc.equals("South") ) { 
     			if(curr_y - index_horiz < 0 && curr_y + index_horiz >= cols) // can't go East or West anymore
     				index_horiz = 1;
-    			else if(curr_y - index_horiz < 0)
-    				return "East";
-    			else if(curr_y + index_horiz >= cols)
-    				return "West";
-    			String east = pingMap(new Point(curr_x, curr_y + index_horiz));
-    			String west = pingMap(new Point(curr_x, curr_y - index_horiz));
+    			else if(curr_y - index_horiz < 0) { // can't go West, only set East
+    				east = pingMap(new Point(curr_x, curr_y + index_horiz));
+    				east_obstacle = is_obstacle(robot_x, robot_y + 1);
+    			} else if(curr_y + index_horiz >= cols) { // can't go East, only set West
+    				west = pingMap(new Point(curr_x, curr_y - index_horiz));
+    				west_obstacle = is_obstacle(robot_x, robot_y - 1);
+    			} else { // can go in both directions
+    				east = pingMap(new Point(curr_x, curr_y + index_horiz));
+    				west = pingMap(new Point(curr_x, curr_y - index_horiz));
+    				east_obstacle = is_obstacle(robot_x, robot_y + 1);
+    				west_obstacle = is_obstacle(robot_x, robot_y - 1);
+    			}
+				
+				if(east_obstacle) { // we came from the east, keep going west
+					return "West";
+				} else if(west_obstacle) { // we came from the west, keep going east
+					return "East";
+				}
+    			
     			if(east.equals("X") && west.equals("X")) {
     				index_horiz++;
     				continue;
+    			} else if(east.equals("O") && west.equals("O") && index_horiz == 1) {
+    				if((int)(Math.random() * 2) == 0)
+    					return opt_direc + "west";
+    				return opt_direc + "east";
     			} else if(east.equals("O") && west.equals("O")) {
     				if((int)(Math.random() * 2) == 0)
     					return "West";
     				return "East";
-    			} else if(east.equals("O"))
+    			} else if(east.equals("O") && index_horiz == 1) {
+    				return opt_direc + "east";
+    			} else if(west.equals("O") && index_horiz == 1) {
+    				return opt_direc + "west";
+    			} else if(east.equals("O")) {
     				return "East";
-    			else
+    			} else if(west.equals("O")) {
     				return "West";
-    		} else if(opt_direc.equals("West") || opt_direc.equals("East")) { //trying to go East or West, check North and South
+    			} else {
+    				index_horiz++;
+    				continue;
+    			}
+    		} 
+    		
+    		// trying to go East or West, check North and South
+    		else if(opt_direc.equals("West") || opt_direc.equals("East")) {
     			if(curr_x - index_vert < 0 && curr_x + index_vert >= rows) // can't go North or South anymore
     				index_vert = 1;
-    			else if(curr_x - index_vert < 0)
-    				return "South";
-    			else if(curr_x + index_vert >= rows)
-    				return "North";
-    			String north = pingMap(new Point(curr_x - index_vert, curr_y));
-    			String south = pingMap(new Point(curr_x + index_vert, curr_y));
+    			else if(curr_x - index_vert < 0) { // can't go North, check South
+    				south = pingMap(new Point(curr_x + index_vert, curr_y));
+    				south_obstacle = is_obstacle(robot_x + 1, robot_y);
+    			} else if(curr_x + index_vert >= rows) { // can't go South, check North
+    				north = pingMap(new Point(curr_x - index_vert, curr_y));
+    				north_obstacle = is_obstacle(robot_x - 1, robot_y);
+    			} else { // can go in both directions
+    				north = pingMap(new Point(curr_x - index_vert, curr_y));
+    				south = pingMap(new Point(curr_x + index_vert, curr_y));
+    				north_obstacle = is_obstacle(robot_x - 1, robot_y);
+    				south_obstacle = is_obstacle(robot_x + 1, robot_y);
+    			}
+				
+				if(north_obstacle) { // we came from the north, keep going south
+					return "South";
+				} else if(south_obstacle) { // we came from the south, keep going north
+					return "North";
+				}
+    			
     			if(north.equals("X") && south.equals("X")) {
     				index_vert++;
     				continue;
+    			} else if(north.equals("O") && south.equals("O") && index_vert == 1) {
+    				if((int)(Math.random() * 2) == 0)
+    					return "North" + opt_direc.toLowerCase();
+    				return "South" + opt_direc.toLowerCase();
     			} else if(north.equals("O") && south.equals("O")) {
     				if((int)(Math.random() * 2) == 0)
     					return "North";
     				return "South";
-    			} else if(north.equals("O"))
+    			} else if(north.equals("O") && index_vert == 1) {
+    				return "North" + opt_direc.toLowerCase();
+    			} else if(south.equals("O") && index_vert == 1) {
+    				return "South" + opt_direc.toLowerCase();
+    			} else if(north.equals("O")) {
     				return "North";
-    			else
+    			} else if(south.equals("O")) {
     				return "South";
-    		} else {
-    			String west = "";
-    			String east = "";
-    			String north = "";
-    			String south = "";
+    			} else {
+    				index_vert++;
+    				continue;
+    			}
+    		} 
+    		
+    		// the other 4 directions, Southeast, Southwest, Northeast, Northwest
+    		else {
     			if(curr_y - index_horiz < 0 && curr_y + index_horiz >= cols && curr_x - index_vert < 0 && curr_x + index_vert >= rows) { 
     				index_vert = 1;
     				index_horiz = 1;
-    			}
-    			else if(curr_x - index_vert < 0 && curr_x + index_vert >= rows) { // can't go North or South anymore, check only East and West
+    			} else if(curr_x - index_vert < 0 && curr_x + index_vert >= rows) { // can't go North or South anymore, check only East and West
     				if(curr_y - index_horiz < 0)
     					return "East";
     				else if(curr_y + index_horiz >= cols)
     					return "West";
 	    			west = pingMap(new Point(curr_x, curr_y - index_horiz));
 	    			east = pingMap(new Point(curr_x, curr_y + index_horiz));
-    			}
-    			else if(curr_y - index_horiz < 0 && curr_y + index_horiz >= cols) { // can't go East or West anymore, check only North and South
+    			} else if(curr_y - index_horiz < 0 && curr_y + index_horiz >= cols) { // can't go East or West anymore, check only North and South
     				if(curr_x - index_vert < 0)
     					return "South";
     				else if(curr_x + index_vert >= rows) 
     					return "North";
     				north = pingMap(new Point(curr_x + index_vert, curr_y));
         			south = pingMap(new Point(curr_x - index_vert, curr_y));
-    			}
-    			else if(curr_x - index_vert < 0) { // can't go North anymore
+    			} else if(curr_x - index_vert < 0) { // can't go North anymore
     				south = pingMap(new Point(curr_x + index_vert, curr_y));
     				if(curr_y - index_horiz < 0) // can't go West anymore
     					east = pingMap(new Point(curr_x, curr_y + index_horiz));
@@ -315,8 +367,7 @@ public class JKRobot extends Robot{
     					east = pingMap(new Point(curr_x, curr_y + index_horiz));
     					west = pingMap(new Point(curr_x, curr_y - index_horiz));
     				}
-    			}
-    			else if(curr_x + index_vert >= rows) { // can't go South anymore
+    			} else if(curr_x + index_vert >= rows) { // can't go South anymore
     				north = pingMap(new Point(curr_x - index_vert, curr_y));
     				if(curr_y - index_horiz < 0) // can't go West anymore
     					east = pingMap(new Point(curr_x, curr_y + index_horiz));
@@ -326,13 +377,11 @@ public class JKRobot extends Robot{
     					east = pingMap(new Point(curr_x, curr_y + index_horiz));
     					west = pingMap(new Point(curr_x, curr_y - index_horiz));
     				}						
-    			}
-    			else if(curr_y - index_horiz < 0) { // can't go West anymore
+    			} else if(curr_y - index_horiz < 0) { // can't go East anymore
     				north = pingMap(new Point(curr_x - index_vert, curr_y));
     				south = pingMap(new Point(curr_x + index_vert, curr_y));
     				west = pingMap(new Point(curr_x, curr_y - index_horiz));
-    			} 
-    			else if(curr_y + index_horiz >= cols) { // can't go West anymore
+    			} else if(curr_y + index_horiz >= cols) { // can't go West anymore
     				north = pingMap(new Point(curr_x - index_vert, curr_y));
     				south = pingMap(new Point(curr_x + index_vert, curr_y));
     				east = pingMap(new Point(curr_x, curr_y + index_horiz));
@@ -342,6 +391,15 @@ public class JKRobot extends Robot{
     				west = pingMap(new Point(curr_x, curr_y - index_horiz));
     				east = pingMap(new Point(curr_x, curr_y + index_horiz));
     			}
+
+    			if(!north.equals(""))
+    				north_obstacle = is_obstacle(curr_x - index_vert, curr_y);
+    			if(!south.equals(""))
+    				south_obstacle = is_obstacle(curr_x + index_vert, curr_y);
+    			if(!west.equals(""))
+    				west_obstacle = is_obstacle(curr_x, curr_y + index_horiz);
+    			if(!east.equals(""))
+    				east_obstacle = is_obstacle(curr_x, curr_y + index_horiz);
     			
     			// if all are obstacles, then continue to spread out
     			if(north.equals("X") && south.equals("X") && west.equals("X") && east.equals("X")) {
@@ -351,7 +409,7 @@ public class JKRobot extends Robot{
     			
     			// special case where one in either direction is a different than actual direction due to the nature of diagonal
     			if(opt_direc.equals("Southwest")) {
-    				if(index_horiz == index_vert && east.equals("O") && north.equals("O")) {
+    				if(index_horiz == 1 && index_vert == 1 && east.equals("O") && north.equals("O")) {
     					if((int)(Math.random()*2) == 0)
         					return "West";
         				return "South";
@@ -359,9 +417,8 @@ public class JKRobot extends Robot{
     					return "South";
     				else if(index_vert == 1 && north.equals("O"))
     					return "West";
-    			}
-    			else if(opt_direc.equals("Northwest")) {
-    				if(index_horiz == index_vert && east.equals("O") && south.equals("O")) {
+    			} else if(opt_direc.equals("Northwest")) {
+    				if(index_horiz == 1 && index_vert == 1 && east.equals("O") && south.equals("O")) {
     					if((int)(Math.random()*2) == 0)
         					return "West";
         				return "North";
@@ -369,9 +426,8 @@ public class JKRobot extends Robot{
     					return "North";
     				else if(index_vert == 1 && south.equals("O"))
     					return "West";
-    			}
-    			else if(opt_direc.equals("Southeast")) {
-    				if(index_horiz == index_vert && west.equals("O") && north.equals("O")) {
+    			} else if(opt_direc.equals("Southeast")) {
+    				if(index_horiz == 1 && index_vert == 1 && west.equals("O") && north.equals("O")) {
     					if((int)(Math.random()*2) == 0)
         					return "East";
         				return "South";
@@ -379,9 +435,8 @@ public class JKRobot extends Robot{
     					return "South";
     				else if(index_vert == 1 && north.equals("O"))
     						return "East";
-    			}
-    			else if(opt_direc.equals("Northeast")) {
-    				if(index_horiz == index_vert && west.equals("O") && south.equals("O")) {
+    			} else if(opt_direc.equals("Northeast")) {
+    				if(index_horiz == 1 && index_vert == 1 && west.equals("O") && south.equals("O")) {
     					if((int)(Math.random()*2) == 0)
         					return "East";
         				return "North";
@@ -400,99 +455,92 @@ public class JKRobot extends Robot{
     				else if(rand_num == 2)
     					return "North";
     				return "South";
-    			}
-    			if(north.equals("O") && south.equals("O") && east.equals("O")) {
+    			} else if(north.equals("O") && south.equals("O") && east.equals("O")) {
     				int rand_num = (int)(Math.random() * 3);
     				if(rand_num == 0) 
     					return "North";
     				else if(rand_num == 1)
     					return "South";
     				return "East";
-    			}
-    			if(north.equals("O") && south.equals("O") && west.equals("O")) {
+    			} else if(north.equals("O") && south.equals("O") && west.equals("O")) {
     				int rand_num = (int)(Math.random() * 3);
     				if(rand_num == 0) 
     					return "North";
     				else if(rand_num == 1)
     					return "South";
     				return "West";
-    			}
-    			if(north.equals("O") && east.equals("O") && west.equals("O")) {
+    			} else if(north.equals("O") && east.equals("O") && west.equals("O")) {
     				int rand_num = (int)(Math.random() * 3);
     				if(rand_num == 0) 
     					return "North";
     				else if(rand_num == 1)
     					return "East";
     				return "West";
-    			}
-    			if(east.equals("O") && south.equals("O") && west.equals("O")) {
+    			} else if(east.equals("O") && south.equals("O") && west.equals("O")) {
     				int rand_num = (int)(Math.random() * 3);
     				if(rand_num == 0) 
     					return "East";
     				else if(rand_num == 1)
     					return "South";
     				return "West";
-    			}
-    			if(north.equals("O") && south.equals("O")) {
+    			} else if(north.equals("O") && south.equals("O")) {
     				if((int)(Math.random() * 2) == 0) 
     					return "North";
     				return "South";
-    			}
-    			if(north.equals("O") && east.equals("O")) {
+    			} else if(north.equals("O") && east.equals("O")) {
     				if((int)(Math.random() * 2) == 0) 
     					return "North";
     				return "East";
-    			}
-    			if(east.equals("O") && south.equals("O")) {
+    			} else if(east.equals("O") && south.equals("O")) {
     				if((int)(Math.random() * 2) == 0) 
     					return "East";
     				return "South";
-    			}
-    			if(north.equals("O") && west.equals("O")) {
+    			} else if(north.equals("O") && west.equals("O")) {
     				if((int)(Math.random() * 2) == 0) 
     					return "North";
     				return "West";
-    			}
-    			if(south.equals("O") && west.equals("O")) {
+    			} else if(south.equals("O") && west.equals("O")) {
     				if((int)(Math.random() * 2) == 0) 
     					return "West";
     				return "South";
-    			}
-    			if(east.equals("O") && west.equals("O")) {
+    			} else if(east.equals("O") && west.equals("O")) {
     				if((int)(Math.random() * 2) == 0) 
     					return "East";
     				return "West";
-    			}
-    			if(north.equals("O"))
+    			} else if (north.equals("O")) {
     				return "North";
-    			else if(south.equals("O"))
+    			} else if(south.equals("O")) {
     				return "South";
-    			else if(east.equals("O"))
+    			} else if(east.equals("O")) {
     				return "East";
-    			else
+    			} else {
     				return "West";
+    			}
     		}
     	}
     	return "Direction does not ever exist for some odd reason.";
     }
     
-    public boolean get_boolean(String guess) {
-    	return guess.equals("X");
+    public void set_new_location(int x, int y) {
+    	finish_x = x;
+    	finish_y = y;
     }
     
-    public Block get_block(int x, int y) { // returns the block associated with the x and y
+    // returns the block associated with the x and y
+    public Block get_block(int x, int y) { 
     	return world_map[x][y];
     }
     
-    public boolean is_obstacle(int x, int y) { // returns if location of x and y is an obstacle or not
+    // 	returns if location of x and y is an obstacle or not
+    public boolean is_obstacle(int x, int y) {
     	return world_map[x][y].getHeuristic() < 0;
     }
     
     public static void main(String[] args) {
         try{
-            World myWorld = new World("TestCases/myInputFile2.txt", true);
+            World myWorld = new World("TestCases/myInputFile4.txt", true);
             JKRobot myRobot = new JKRobot();
-            myWorld.createGUI(700, 500, 1000);
+            myWorld.createGUI(700, 500, 500);
             myRobot.addToWorld(myWorld);
             myRobot.travelToDestination();
         }
