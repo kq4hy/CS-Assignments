@@ -1,0 +1,412 @@
+package ttr.model.player;
+
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+import ttr.model.destinationCards.Routes;
+
+public class SmartBot extends Player {
+	private ArrayList<Route> routes = new ArrayList<Route>();
+	private ArrayList<ArrayList<Route>> neighborList = new ArrayList<ArrayList<Route>>();
+	private ArrayList<Route> cityNeighbor = new ArrayList<Route>();
+
+	public SmartBot(String name) {
+		super(name);
+	}
+
+	public SmartBot() {
+		super("SmartBot");
+	}
+
+	@Override
+	public void makeMove() {
+
+
+		System.out.println(this.getName());
+		Routes newRoute = Routes.getInstance();
+		ArrayList<ArrayList<Route>> adjList = makeAdjList();
+		ArrayList<TrainCard> hand = getHand();
+		ArrayList<DestinationTicket> destTick = getDestinationTickets();
+		if (destTick.size() == 0) {
+			super.drawDestinationTickets();
+		}
+		// CALCULATE DT WITH LARGEST SECTION
+		int maxCTCost = 0;
+		DestinationTicket maxDT = null;
+		for (DestinationTicket DT : destTick) {
+			System.out.println("Destination Ticket : " + DT + " with Cost of "
+					+ DT.getValue());
+			if (DT.getValue() > maxCTCost) {
+				maxCTCost = DT.getValue();
+				maxDT = DT;
+			}
+		}
+		System.out.println("Destination with longest section is " + maxDT
+				+ " with a cost of " + maxCTCost);
+		// FIND SHORTEST PATH FOR LONGEST DESTTICK
+		Destination from = maxDT.getFrom();
+		System.out.println(from);
+		Destination to = maxDT.getTo();
+		System.out.println(to);
+		ArrayList<Destination> shortest = shortestPath(from, to);
+		// CREATE ROUTES FROM SHORTEST PATH OF DESTINATIONS
+		ArrayList<ArrayList<Route>> shortestAsRoutes = destToRoute(shortest);
+		System.out.println(shortestAsRoutes);
+		// find longest section of shortest route and get that color cards until
+		// you can play on it
+		int length = 0;
+		TrainCardColor color1 = null;
+		Route longestRoute1 = null;
+		TrainCardColor color2 = null;
+		Route longestRoute2 = null;
+		// find longest part of shortest path left to be claimed
+		for (ArrayList<Route> r : shortestAsRoutes) {//for each route, if you do not have enough colors to claim the longest one
+			//claim the next longest.. so above we found longest 1. now we need to find longest 2.
+			//but this will not be inside the for loop that is inside the for loop.. and needs to be
+			//called something other than longest1 and longest2 since those names are taken.
+			for (int i = 0; i < r.size(); i++) {
+				if (i == 0) { // only one route
+					if (r.get(i).getCost() > length && newRoute.isRouteClaimed(r.get(i)) == false) {
+						length = r.get(i).getCost();
+						color1 = r.get(i).getColor();
+						longestRoute1 = r.get(i);
+					} else if (newRoute.isRouteClaimed(r.get(i)) == true) {
+						System.out.println("ROUTE HAS BEEN CLAIMED");
+					}
+				}
+				if (i > 0) { // two colored routes
+					if (r.get(i).getCost() > length && newRoute.isRouteClaimed(r.get(i)) == false) {
+						length = r.get(i).getCost();
+						color2 = r.get(i).getColor();
+						longestRoute2 = r.get(i);
+					} else if (newRoute.isRouteClaimed(r.get(i)) == true) {
+						System.out.println("ROUTE HAS BEEN CLAIMED");
+					}
+				}
+			}
+		}
+		//if longest path cannot be claimed because you do not have enough train cards and none of the face up cards are cards you need
+		//look for second longest and attempt to claim that one.
+		int secondLongest = length;
+		TrainCardColor color3 = null;
+		Route longestRoute3 = null;
+		TrainCardColor color4 = null;
+		Route longestRoute4 = null;
+		// find longest part of shortest path left to be claimed
+		for (ArrayList<Route> r : shortestAsRoutes) {
+			for (int i = 0; i < r.size(); i++) {
+				if (i == 0) { // only one route
+					if (r.get(i).getCost() < secondLongest
+							&& newRoute.isRouteClaimed(r.get(i)) == false) {
+						secondLongest = r.get(i).getCost();
+						color3 = r.get(i).getColor();
+						longestRoute3 = r.get(i);
+					} else if (newRoute.isRouteClaimed(r.get(i)) == true) {
+						System.out.println("ROUTE HAS BEEN CLAIMED");
+					}
+				}
+				if (i > 0) { // two colored routes
+					if (r.get(i).getCost() > length
+							&& newRoute.isRouteClaimed(r.get(i)) == false) {
+						length = r.get(i).getCost();
+						color4 = r.get(i).getColor();
+						longestRoute4 = r.get(i);
+					} else if (newRoute.isRouteClaimed(r.get(i)) == true) {
+						System.out.println("ROUTE HAS BEEN CLAIMED");
+					}
+				}
+			}
+		}
+//		System.out.println("length of route " + length);
+//		System.out.println("color 1 " + color1);
+//		System.out.println("color 2  " + color2);
+//		System.out.println("longest route 1" + longestRoute1);
+//		System.out.println(longestRoute2);
+		int numColor1 = getNumTrainCardsByColor(color1);
+		int numColor2 = getNumTrainCardsByColor(color2);
+		int numRainbow = getNumTrainCardsByColor(TrainCardColor.rainbow);
+		int colorChoice = numColor1 - numColor2;
+		ArrayList<Integer> arrayHand = handArray(hand);
+		boolean played = false;
+		// IF WE HAVE CORRECT NUMBER OF CARDS FOR ROUTE, CLAIM, add or statement for gray
+		if (color1 == TrainCardColor.rainbow) {                         //if color 1 track is rainbow, and we have more of one color than
+			// the route length, then we can claim the route
+			for (TrainCardColor c : TrainCardColor.values()) {
+				if (getNumTrainCardsByColor(c) >= length) {
+					played = true;
+					System.out.println("Claiming " + longestRoute1);
+					super.claimRoute(longestRoute1, c);
+				}
+
+			}
+		} else if (color2 == TrainCardColor.rainbow) {
+			for (TrainCardColor c : TrainCardColor.values()) {         //same as above
+				if (getNumTrainCardsByColor(c) >= length) {
+					played = true;
+					System.out.println("Claiming " + longestRoute2);
+					super.claimRoute(longestRoute2, c);
+				}
+			}
+		} else if (numColor1 >= length || (numColor1 + numRainbow) >= length) { //if we have enough or more of the color needed to claim the route
+			//or if we can combine with rainbow colors to have enough, claim route
+			played = true;
+			System.out.println("Claiming " + longestRoute1);
+			super.claimRoute(longestRoute1, color1);
+		} else if ((numColor2 + numRainbow) >= length || numColor2 >= length) { //same as above
+			played = true;
+			System.out.println("Claiming " + longestRoute2);
+			super.claimRoute(longestRoute2, color2);
+		}
+		// ELSE WE DRAW A CARD
+		System.out.println("NO ROUTES CLAIMED, DRAW CARD");
+		if (played == false) {
+			ArrayList<TrainCard> tdv = getFaceUpCards();
+			// GO THROUGH ALL FACEUP CARDS
+			boolean drawnACard = false;
+			for (int i = 0; i < tdv.size(); i++) {
+				TrainCard t = tdv.get(i);
+				TrainCardColor tcc = t.getColor();
+				System.out.println("Card at " + i + " is " + tcc);
+				// IF CARD IS RAINBOW PICK IT
+				if (tcc.equals(TrainCardColor.rainbow)) {
+					drawnACard = true;
+					super.drawTrainCard(i + 1);
+				}
+				// IF CARD IS SAME AS COLOR2, PICK IT
+				else if (colorChoice < 0) {
+					if (color2 == tcc) {
+						drawnACard = true;
+						super.drawTrainCard(i + 1);
+					}
+				}
+				// IF CARD IS SAME AS COLOR1, PICK IT
+				else if (colorChoice > 0) {
+					if (color1 == tcc) {
+						drawnACard = true;
+						super.drawTrainCard(i + 1);
+					}
+				} else if (colorChoice == 0) {
+					if (color1 == tcc || color2 == tcc) {
+						drawnACard = true;
+						super.drawTrainCard(i + 1);
+					}
+				}
+			}
+			// IF NO CARD DRAWN, DRAW FROM DECK ** this can be edited to pick
+			// next largest unclaimed route's color
+			if (drawnACard == false) {
+				super.drawTrainCard(0);
+			}
+		}
+	}
+
+	/**
+	 * Creates a linked list of each cities neighbors *
+	 */
+	public ArrayList<ArrayList<Route>> makeAdjList() {
+		ArrayList<ArrayList<Route>> neighborList = new ArrayList<ArrayList<Route>>();
+		ArrayList<Route> cityNeighbor = new ArrayList<Route>();
+		Routes newRoutes = Routes.getInstance();
+		routes = newRoutes.getAllRoutes(); // all
+		for (Destination i : Destination.values()) {
+			for (int x = 0; x < routes.size(); x++) {
+				if (routes.get(x).getDest1() == i) {
+					cityNeighbor.add(routes.get(x));
+				}
+			}
+			neighborList.add(cityNeighbor);
+		}
+		return neighborList;
+	}
+
+	public ArrayList<Destination> shortestPath(Destination from, Destination to) {
+
+		Routes newRoutes = Routes.getInstance();
+		HashMap<Destination, Destination> parent = new HashMap<Destination, Destination>();
+		HashMap<Destination, Integer> openList = new HashMap<Destination, Integer>();
+		HashMap<Destination, Integer> closedList = new HashMap<Destination, Integer>();
+
+		openList.put(from, 0);
+		parent.put(from, null); // will reset for other nodes if better path
+		// exists
+
+		while (openList.size() != 0) {
+
+			Destination nextSmallest = getMin(openList);
+			System.out.println("NEXT SMALLEST is: " + nextSmallest);
+			// cost to current city
+			int curCost = openList.get(nextSmallest);
+			if (nextSmallest.equals(to)) {
+				break;
+			}
+
+			openList.remove(nextSmallest);
+
+			// arrayList of neighbors
+			ArrayList<Destination> curNeighbors = newRoutes
+					.getNeighbors(nextSmallest);
+			// go through all neighbors get cost and decide if should
+			// add/update/ignore
+			for (Destination neighbor : curNeighbors) {
+				// get connection between current and neighbor
+				ArrayList<Route> connection = newRoutes.getRoutes(nextSmallest,
+						neighbor);
+				// if route from node to neighbor is claimed by another player
+				// add it to the closed list and look at all other neighbors
+				boolean alreadyClaimed = false;
+				for (Route r : connection) {
+
+					if (newRoutes.isRouteClaimed(r) == true && r.getOwner() != this) {
+//                        closedList.put(neighbor, 99999999);
+						connection.remove(neighbor);
+						alreadyClaimed = true;
+					}
+				}
+				// calculate totalCost to neighbor
+				int curNeighborCost = 99999;
+				for (Route r : connection) {
+					if (r.getCost() < curNeighborCost&&alreadyClaimed==false) {
+						curNeighborCost = r.getCost();
+					}
+					if(alreadyClaimed==true){
+						continue;
+					}
+				}
+				// totalCost to neighbor
+				int totalCost = curNeighborCost + curCost;
+				boolean isInO = false;
+				// if element in closed list do nothing
+				boolean isInC = false;
+				for (Destination key : closedList.keySet()) {
+					if (neighbor.equals(key)) {
+						isInC = true;
+						break;
+					}
+				}
+				// if city is not in the closed list, check open list
+				if (isInC == false) {
+					for (Destination key : openList.keySet()) {
+						if (neighbor.equals(key)) {
+							isInO = true;
+							if (totalCost >= openList.get(key)) {
+								break;
+							}
+							// if openlist.cost > neighborcost
+							else { // must update
+								openList.remove(key);
+								openList.put(neighbor, totalCost);
+								parent.put(neighbor, nextSmallest);
+								break;
+							}
+						}
+					}
+				}
+				if (isInC == false && isInO == false) {
+					openList.put(neighbor, totalCost);
+					parent.put(neighbor, nextSmallest);
+				}
+			}
+			closedList.put(nextSmallest, curCost);
+		}
+		ArrayList<Destination> path = new ArrayList<Destination>();
+		path.add(to);
+		Destination p = parent.get(to);
+		while (p != null) {
+			path.add(p);
+			p = parent.get(p);
+		}
+		ArrayList<Destination> orderedPath = new ArrayList<Destination>();
+		for (int i = path.size() - 1; i >= 0; i--) {
+			orderedPath.add(path.get(i));
+		}
+		return orderedPath;
+	}
+
+	public Destination getMin(HashMap<Destination, Integer> HM) {
+		int min = 99999;
+		Destination smallDest = null;
+		for (Destination key : HM.keySet()) {
+			if (HM.get(key) < min) {
+				min = HM.get(key);
+				smallDest = key;
+			}
+		}
+		return smallDest;
+	}
+
+	public ArrayList<ArrayList<Route>> destToRoute(
+			ArrayList<Destination> shortPath) {
+		ArrayList<ArrayList<Route>> dToR = new ArrayList<ArrayList<Route>>();
+		Routes newRoutes = Routes.getInstance();
+		for (int i = 0; i < shortPath.size() - 1; i++) {
+			Destination a = shortPath.get(i);
+			Destination b = shortPath.get(i + 1);
+			ArrayList<Route> allRoutes = newRoutes.getRoutes(a, b);
+			dToR.add(allRoutes);
+		}
+		return dToR;
+	}
+
+	public ArrayList<Integer> handArray(ArrayList<TrainCard> h) {
+		ArrayList<Integer> colorCount = new ArrayList<Integer>(Collections.nCopies(9, 0));
+		for (TrainCard tc : h) {
+			if (tc.getColor().equals(TrainCardColor.black)) {
+				int black = colorCount.get(0);
+				black++;
+				colorCount.set(0, black);
+			}
+			if (tc.getColor().equals(TrainCardColor.blue)) {
+				int black = colorCount.get(1);
+				black++;
+				colorCount.set(1, black);
+			}
+			if (tc.getColor().equals(TrainCardColor.green)) {
+				int black = colorCount.get(2);
+				black++;
+				colorCount.set(2, black);
+			}
+			if (tc.getColor().equals(TrainCardColor.orange)) {
+				int black = colorCount.get(3);
+				black++;
+				colorCount.set(3, black);
+			}
+			if (tc.getColor().equals(TrainCardColor.purple)) {
+				int black = colorCount.get(4);
+				black++;
+				colorCount.set(4, black);
+			}
+			if (tc.getColor().equals(TrainCardColor.rainbow)) {
+				int black = colorCount.get(5);
+				black++;
+				colorCount.set(5, black);
+			}
+			if (tc.getColor().equals(TrainCardColor.red)) {
+				int black = colorCount.get(6);
+				black++;
+				colorCount.set(6, black);
+			}
+			if (tc.getColor().equals(TrainCardColor.white)) {
+				int black = colorCount.get(7);
+				black++;
+				colorCount.set(7, black);
+			}
+			if (tc.getColor().equals(TrainCardColor.yellow)) {
+				int black = colorCount.get(8);
+				black++;
+				colorCount.set(8, black);
+			}
+		}
+		return colorCount;
+
+	}
+
+
+}

@@ -1,0 +1,1014 @@
+package ttr.model.player;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+/**
+ * Markov Decision Process approach to a Ticket To Ride AI.
+ * CS 4710 Artificial Intelligence, Summer 2015.
+ * @author Steven Woodrum (sdw7ng)
+ *
+ */
+public class sdw7ngAI extends Player {
+	
+	public sdw7ngAI(String name) {
+		super(name);
+		initialize();
+	}
+	public sdw7ngAI() {
+		super("Steven Woodrum");
+		initialize();
+	}
+	
+	private enum State {
+		CANT_AFFORD_ANY_WANTED_ROUTES,
+		CAN_BUY_SIZE_1,
+		CAN_BUY_SIZE_2,
+		CAN_BUY_SIZE_3,
+		CAN_BUY_SIZE_4,
+		CAN_BUY_SIZE_5,
+		CAN_BUY_SIZE_6,
+		NO_ROUTES_WANTED;
+	}
+	
+	private enum Action {
+		DRAW_DESTINATION_TICKET,
+		DRAW_CARD,
+		BUY_ROUTE;
+	}
+
+
+	private void initialize() {
+		setupHashMaps();
+	}
+	
+	private double gamma = 0.5;  //TODO adjust
+	
+	
+	private HashMap<String, Double> probs = new HashMap<String, Double>();
+	private HashMap<String, Double> rewards = new HashMap<String, Double>();
+	
+	private void setupHashMaps() {
+		
+		String key = "CANT_AFFORD_ANY_WANTED_ROUTES:CANT_AFFORD_ANY_WANTED_ROUTES:DRAW_CARD";
+		probs.put(key, 0.4);
+		rewards.put(key, 0.0);
+		key = "CANT_AFFORD_ANY_WANTED_ROUTES:CAN_BUY_SIZE_1:DRAW_CARD";
+		probs.put(key, 0.1);
+		rewards.put(key, 0.0);
+		key = "CANT_AFFORD_ANY_WANTED_ROUTES:CAN_BUY_SIZE_2:DRAW_CARD";
+		probs.put(key, 0.1);
+		rewards.put(key, 0.0);
+		key = "CANT_AFFORD_ANY_WANTED_ROUTES:CAN_BUY_SIZE_3:DRAW_CARD";
+		probs.put(key, 0.1);
+		rewards.put(key, 0.0);
+		key = "CANT_AFFORD_ANY_WANTED_ROUTES:CAN_BUY_SIZE_4:DRAW_CARD";
+		probs.put(key, 0.1);
+		rewards.put(key, 0.0);
+		key = "CANT_AFFORD_ANY_WANTED_ROUTES:CAN_BUY_SIZE_5:DRAW_CARD";
+		probs.put(key, 0.1);
+		rewards.put(key, 0.0);
+		key = "CANT_AFFORD_ANY_WANTED_ROUTES:CAN_BUY_SIZE_6:DRAW_CARD";
+		probs.put(key, 0.1);
+		rewards.put(key, 0.0);
+		
+		key = "NO_ROUTES_WANTED:NO_ROUTES_WANTED:DRAW_DESTINATION_TICKET";
+		probs.put(key, 0.125);
+		rewards.put(key, 11.633);  //average point-value of a destination ticket
+		key = "NO_ROUTES_WANTED:CANT_AFFORD_ANY_WANTED_ROUTES:DRAW_DESTINATION_TICKET";
+		probs.put(key, 0.125);
+		rewards.put(key, 0.0);
+		key = "NO_ROUTES_WANTED:CAN_BUY_SIZE_1:DRAW_DESTINATION_TICKET";
+		probs.put(key, 0.125);
+		rewards.put(key, 0.0);
+		key = "NO_ROUTES_WANTED:CAN_BUY_SIZE_2:DRAW_DESTINATION_TICKET";
+		probs.put(key, 0.125);
+		rewards.put(key, 0.0);
+		key = "NO_ROUTES_WANTED:CAN_BUY_SIZE_3:DRAW_DESTINATION_TICKET";
+		probs.put(key, 0.125);
+		rewards.put(key, 0.0);
+		key = "NO_ROUTES_WANTED:CAN_BUY_SIZE_4:DRAW_DESTINATION_TICKET";
+		probs.put(key, 0.125);
+		rewards.put(key, 0.0);
+		key = "NO_ROUTES_WANTED:CAN_BUY_SIZE_5:DRAW_DESTINATION_TICKET";
+		probs.put(key, 0.125);
+		rewards.put(key, 0.0);
+		key = "NO_ROUTES_WANTED:CAN_BUY_SIZE_6:DRAW_DESTINATION_TICKET";
+		probs.put(key, 0.125);
+		rewards.put(key, 0.0);
+		
+		key = "CAN_BUY_SIZE_1:CAN_BUY_SIZE_1:DRAW_CARD";
+		probs.put(key, 1.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_1:CAN_BUY_SIZE_2:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_1:CAN_BUY_SIZE_3:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_1:CAN_BUY_SIZE_4:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_1:CAN_BUY_SIZE_5:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_1:CAN_BUY_SIZE_6:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_1:CAN_BUY_SIZE_1:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 1.0);
+		key = "CAN_BUY_SIZE_1:CANT_AFFORD_ANY_WANTED_ROUTES:BUY_ROUTE";
+		probs.put(key, 1.0);
+		rewards.put(key, 1.0);
+		key = "CAN_BUY_SIZE_1:NO_ROUTES_WANTED:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 1.0);
+		
+		key = "CAN_BUY_SIZE_2:CAN_BUY_SIZE_2:DRAW_CARD";
+		probs.put(key, 1.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_2:CAN_BUY_SIZE_3:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_2:CAN_BUY_SIZE_4:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_2:CAN_BUY_SIZE_5:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_2:CAN_BUY_SIZE_6:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_2:CAN_BUY_SIZE_2:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 2.0);
+		key = "CAN_BUY_SIZE_2:CAN_BUY_SIZE_1:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 2.0);
+		key = "CAN_BUY_SIZE_2:CANT_AFFORD_ANY_WANTED_ROUTES:BUY_ROUTE";
+		probs.put(key, 1.0);
+		rewards.put(key, 2.0);
+		key = "CAN_BUY_SIZE_2:NO_ROUTES_WANTED:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 2.0);
+		
+		key = "CAN_BUY_SIZE_3:CAN_BUY_SIZE_3:DRAW_CARD";
+		probs.put(key, 1.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_3:CAN_BUY_SIZE_4:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_3:CAN_BUY_SIZE_5:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_3:CAN_BUY_SIZE_6:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_3:CAN_BUY_SIZE_3:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 4.0);
+		key = "CAN_BUY_SIZE_3:CAN_BUY_SIZE_2:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 4.0);
+		key = "CAN_BUY_SIZE_3:CAN_BUY_SIZE_1:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 4.0);
+		key = "CAN_BUY_SIZE_3:CANT_AFFORD_ANY_WANTED_ROUTES:BUY_ROUTE";
+		probs.put(key, 1.0);
+		rewards.put(key, 4.0);
+		key = "CAN_BUY_SIZE_3:NO_ROUTES_WANTED:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 4.0);
+		
+		key = "CAN_BUY_SIZE_4:CAN_BUY_SIZE_4:DRAW_CARD";
+		probs.put(key, 1.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_4:CAN_BUY_SIZE_5:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_4:CAN_BUY_SIZE_6:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_4:CAN_BUY_SIZE_4:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 7.0);
+		key = "CAN_BUY_SIZE_4:CAN_BUY_SIZE_3:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 7.0);
+		key = "CAN_BUY_SIZE_4:CAN_BUY_SIZE_2:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 7.0);
+		key = "CAN_BUY_SIZE_4:CAN_BUY_SIZE_1:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 7.0);
+		key = "CAN_BUY_SIZE_4:CANT_AFFORD_ANY_WANTED_ROUTES:BUY_ROUTE";
+		probs.put(key, 1.0);
+		rewards.put(key, 7.0);
+		key = "CAN_BUY_SIZE_4:NO_ROUTES_WANTED:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 7.0);
+		
+		key = "CAN_BUY_SIZE_5:CAN_BUY_SIZE_5:DRAW_CARD";
+		probs.put(key, 1.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_5:CAN_BUY_SIZE_6:DRAW_CARD";
+		probs.put(key, 0.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_5:CAN_BUY_SIZE_5:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 10.0);
+		key = "CAN_BUY_SIZE_5:CAN_BUY_SIZE_4:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 10.0);
+		key = "CAN_BUY_SIZE_5:CAN_BUY_SIZE_3:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 10.0);
+		key = "CAN_BUY_SIZE_5:CAN_BUY_SIZE_2:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 10.0);
+		key = "CAN_BUY_SIZE_5:CAN_BUY_SIZE_1:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 10.0);
+		key = "CAN_BUY_SIZE_5:CANT_AFFORD_ANY_WANTED_ROUTES:BUY_ROUTE";
+		probs.put(key, 1.0);
+		rewards.put(key, 10.0);
+		key = "CAN_BUY_SIZE_5:NO_ROUTES_WANTED:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 10.0);
+		
+		key = "CAN_BUY_SIZE_6:CAN_BUY_SIZE_6:DRAW_CARD";
+		probs.put(key, 1.0);
+		rewards.put(key, 0.0);
+		key = "CAN_BUY_SIZE_6:CAN_BUY_SIZE_6:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 15.0);
+		key = "CAN_BUY_SIZE_6:CAN_BUY_SIZE_5:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 15.0);
+		key = "CAN_BUY_SIZE_6:CAN_BUY_SIZE_4:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 15.0);
+		key = "CAN_BUY_SIZE_6:CAN_BUY_SIZE_3:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 15.0);
+		key = "CAN_BUY_SIZE_6:CAN_BUY_SIZE_2:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 15.0);
+		key = "CAN_BUY_SIZE_6:CAN_BUY_SIZE_1:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 15.0);
+		key = "CAN_BUY_SIZE_6:CANT_AFFORD_ANY_WANTED_ROUTES:BUY_ROUTE";
+		probs.put(key, 1.0);
+		rewards.put(key, 15.0);
+		key = "CAN_BUY_SIZE_6:NO_ROUTES_WANTED:BUY_ROUTE";
+		probs.put(key, 0.0);
+		rewards.put(key, 15.0);
+	}
+	
+	private double probabilityOfTransition(State from, State to, Action via) {
+		String key = from.name() + ":" + to.name() + ":" + via.name();
+		Double result = probs.get(key);
+		if (result == null) {
+			return 0.0;
+		}
+		else {
+			return result;
+		}
+	}
+	
+	private double rewardOfTransition(State from, State to, Action via) {
+		String key = from.name() + ":" + to.name() + ":" + via.name();
+		Double result = rewards.get(key);
+		if (result == null) {
+			return 0.0;
+		}
+		else {
+			return result;
+		}
+	}
+	
+	//Value iteration
+	private int startK = 100;  //TODO adjust
+	//private Action bestAction = null;
+	
+	
+	private HashMap<State, Double> vMap = new HashMap<State, Double>();
+	private HashMap<State, Action> aMap = new HashMap<State, Action>();
+	
+	private void resetVMap() {
+		for (State s : State.values()) {
+			vMap.put(s, 0.0);
+		}
+	}
+	
+	private void valueIteration(int k) {
+		for(int i = 0; i < k; i++) {
+			if (k == 2) {
+				setupHashMaps();
+			}
+			for (State s : State.values()) {
+				for (Action a : Action.values()) {
+					for (State s2 : State.values()) {
+						double sum = probabilityOfTransition(s, s2, a) * (rewardOfTransition(s, s2, a) + gamma*vMap.get(s2));
+						if (sum > vMap.get(s)) {
+							vMap.put(s, sum);
+							aMap.put(s, a);
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	/*
+	private double q(int k, State s, Action a) {
+		double sum = 0.0;
+		for (State next : State.values()) {
+			sum += ( probabilityOfTransition(s, next, a) * ( rewardOfTransition(s, next, a) + gamma*v(k-1, next) ) );
+		}
+		return sum;
+	}
+	
+	private double v(int k, State s) {
+		double ret = 0.0;
+		if (k == 0) {  //base case
+			switch(s) {
+			case CANT_AFFORD_ANY_WANTED_ROUTES:
+				ret = 10;
+				break;
+			case CAN_BUY_SIZE_1:
+				ret = 10;
+				break;
+			case CAN_BUY_SIZE_2:
+				ret = 10;
+				break;
+			case CAN_BUY_SIZE_3:
+				ret = 10;
+				break;
+			case CAN_BUY_SIZE_4:
+				ret = 10;
+				break;
+			case CAN_BUY_SIZE_5:
+				ret = 10;
+				break;
+			case CAN_BUY_SIZE_6:
+				ret = 10;
+				break;
+			case NO_ROUTES_WANTED:
+				ret = 10;
+				break;
+			default:
+				ret = 10;
+				break;
+			}
+		}
+		else {  //recursive case
+			//Action bestAction = null;
+			ret = -99999.0;
+			for (Action a : Action.values()) {
+				double aScore = q(k, s, a);
+				if (aScore > ret) {
+					//bestAction = a;
+					ret = aScore;
+					if (k == startK)
+						bestAction = a;
+				}
+			}
+		}
+		return ret;
+	}
+	*/
+	
+	private ArrayList<Route> wantedRoutes = new ArrayList<Route>();
+	private TrainCardColor lastKnownWantedColor = TrainCardColor.rainbow;
+	
+	/**
+	 * Does two things:
+	 * 1. Updates its knowledge of the board (e.g., changes in route ownership, changes in face-up cards)
+	 * 2. Determines and returns its current state.
+	 */
+	private State determineCurrentState() {
+		setupHashMaps();
+		
+		wantedRoutes = pickWantedRoutes();
+		System.out.println(wantedRoutes);
+		
+		if (super.getDestinationTickets().size() == 0){
+			return State.NO_ROUTES_WANTED;
+		}
+		
+		///////////
+		
+
+		int longest = getLongestLength(wantedRoutes);
+		
+		int longestWithFaceup = 0;
+		for (int i = 0; i < super.getFaceUpCards().size(); i++) {
+			TrainCard t = super.getFaceUpCards().get(i);
+			ArrayList<Route> potl = pickWantedRoutes(t.getColor());
+			int temp = getLongestLength(potl);
+			if (temp > longestWithFaceup) {
+				longestWithFaceup = temp;
+				lastKnownWantedColor = t.getColor();
+			}
+		}
+		if (longestWithFaceup > longest) {
+			adjustProbabilities(longest, longestWithFaceup);
+		}
+		/*
+		else {
+			setupHashMaps();
+		}
+		*/
+		
+		if (longest == 6)
+			return State.CAN_BUY_SIZE_6;
+		else if (longest == 5)
+			return State.CAN_BUY_SIZE_5;
+		else if (longest == 4)
+			return State.CAN_BUY_SIZE_4;
+		else if (longest == 3)
+			return State.CAN_BUY_SIZE_3;
+		else if (longest == 2)
+			return State.CAN_BUY_SIZE_2;
+		else if (longest == 1)
+			return State.CAN_BUY_SIZE_1;
+		else
+			return State.CANT_AFFORD_ANY_WANTED_ROUTES;
+		
+	}
+	
+	
+	private int getLongestLength(ArrayList<Route> rts) {
+		int longest = 0;
+		for (Route r : rts) {
+			int len = r.getCost();
+			if (len > longest)
+				longest = len;
+		}
+		return longest;
+	}
+	
+
+	@Override
+	public void makeMove() {
+		startK -= 1;
+		resetVMap();
+		State currentState = determineCurrentState();
+		System.out.println("Current state: " + currentState.name());
+		
+		valueIteration(startK);
+		
+		/*
+		double result = v(startK, currentState);
+		System.out.println("Best action: " + bestAction.name());
+		System.out.println(result);
+		*/
+		
+		if (getOpponentTrainsLeft() < 30)
+			gamma = 0.2;
+		
+		switch (aMap.get(currentState)) { //(bestAction) {
+		case BUY_ROUTE:
+			buyLongestRoute(currentState);
+			break;
+		case DRAW_CARD:
+			drawColor(lastKnownWantedColor);
+			break;
+		case DRAW_DESTINATION_TICKET:
+			if (getOpponentTrainsLeft() < 18) {
+				buyAnyLongestRoute();
+			}
+			else {
+				super.drawDestinationTickets();
+			}
+			break;
+		default:
+			System.out.println("Something broke.");
+			break;
+		}
+	}
+	
+	
+	private ArrayList<Route> pickWantedRoutes() {
+		return pickWantedRoutes(null);
+	}
+	
+
+	private ArrayList<Route> pickWantedRoutes(TrainCardColor fromTable) {
+		ArrayList<Route> want = new ArrayList<Route>();
+		
+		//Categorize hand by color
+		int rainbow = 0, black = 0, blue = 0, green = 0, orange = 0, purple = 0, red = 0, white = 0, yellow = 0;
+		for (TrainCard t : super.getHand()) {
+			switch(t.getColor()) {
+				case black:
+					black++;
+					break;
+				case blue:
+					blue++;
+					break;
+				case green:
+					green++;
+					break;
+				case orange:
+					orange++;
+					break;
+				case purple:
+					purple++;
+					break;
+				case rainbow:
+					rainbow++;
+					break;
+				case red:
+					red++;
+					break;
+				case white:
+					white++;
+					break;
+				case yellow:
+					yellow++;
+					break;
+				default:
+					System.out.println("Something went wrong in method pickWantedRoutes spot 1");
+					break;
+			}
+		}
+		
+		//Tack on card from table
+		if (fromTable != null) {
+			switch(fromTable) {
+			case black:
+				black++;
+				break;
+			case blue:
+				blue++;
+				break;
+			case green:
+				green++;
+				break;
+			case orange:
+				orange++;
+				break;
+			case purple:
+				purple++;
+				break;
+			case rainbow:
+				rainbow++;
+				break;
+			case red:
+				red++;
+				break;
+			case white:
+				white++;
+				break;
+			case yellow:
+				yellow++;
+				break;
+			default:
+				//System.out.println("Something went wrong in method pickWantedRoutes with fromTable card.");
+				break;
+			}
+		}
+		
+		ArrayList<Route> ticketPaths = new ArrayList<Route>();
+		for (DestinationTicket ticket : super.getDestinationTickets()) {
+			ticketPaths.addAll(shortestPath(ticket.getFrom(), ticket.getTo()));
+		}
+		
+		//See what you can buy
+		for (Route route : ticketPaths) { //: Routes.getInstance().getAllRoutes()) {
+			if (!Routes.getInstance().isRouteClaimed(route) && super.getNumTrainPieces() >= route.getCost()) {
+				if (route.getColor() == TrainCardColor.black && (black + rainbow) >= route.getCost()){want.add(route); }
+				else if (route.getColor() == TrainCardColor.blue && (blue + rainbow) >= route.getCost()){want.add(route); }
+				else if (route.getColor() == TrainCardColor.green && (green + rainbow) >= route.getCost()){want.add(route);}
+				else if (route.getColor() == TrainCardColor.orange && (orange + rainbow) >= route.getCost()){want.add(route);}
+				else if (route.getColor() == TrainCardColor.purple && (purple + rainbow) >= route.getCost()){want.add(route);}
+				else if (route.getColor() == TrainCardColor.red && (red + rainbow) >= route.getCost()){want.add(route);}
+				else if (route.getColor() == TrainCardColor.white && (white + rainbow) >= route.getCost()){want.add(route);}
+				else if (route.getColor() == TrainCardColor.yellow && (yellow + rainbow) >= route.getCost()){want.add(route);}
+				else if (route.getColor() == TrainCardColor.rainbow) {
+					if ( (black + rainbow) >= route.getCost() || (blue + rainbow) >= route.getCost()
+							|| (green + rainbow) >= route.getCost() || (orange+rainbow) >= route.getCost()
+							|| (purple + rainbow) >= route.getCost() || (red + rainbow) >= route.getCost()
+							|| (white + rainbow) >= route.getCost() || (yellow + rainbow) >= route.getCost()
+							|| (rainbow) >= route.getCost() ) {
+						want.add(route);
+					}
+				}
+				else {
+					//System.out.println("Something went wrong in method pickWantedRoutes spot 2");
+				}
+			}
+		}
+		
+		return want;
+	}
+
+	
+	private void adjustProbabilities(int fromSize, int toSize) {
+		for (String key : probs.keySet()) {  //is using a foreach loop a problem?
+			if (key.startsWith("CAN_BUY_SIZE_" + fromSize) && key.endsWith("DRAW_CARD")) {
+				if (key.contains(":CAN_BUY_SIZE_" + toSize)) {
+					probs.put(key, 1.0);
+					rewards.put(key, 15.0);
+				}
+				else {
+					probs.put(key, 0.0);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Buys the longest possible route from wantedRoutes, according to currentState
+	 */
+	private void buyLongestRoute(State currentState) {
+		int targetLength = 0;
+		switch(currentState) {
+		case CANT_AFFORD_ANY_WANTED_ROUTES:
+			System.out.println("Shouldn't be here 1");
+			break;
+		case CAN_BUY_SIZE_1:
+			targetLength = 1;
+			break;
+		case CAN_BUY_SIZE_2:
+			targetLength = 2;
+			break;
+		case CAN_BUY_SIZE_3:
+			targetLength = 3;
+			break;
+		case CAN_BUY_SIZE_4:
+			targetLength = 4;
+			break;
+		case CAN_BUY_SIZE_5:
+			targetLength = 5;
+			break;
+		case CAN_BUY_SIZE_6:
+			targetLength = 6;
+			break;
+		case NO_ROUTES_WANTED:
+			System.out.println("Shouldn't be here 2");
+			break;
+		default:
+			System.out.println("Shouldn't be here 3");
+			break;
+		}
+		
+		for (Route r : wantedRoutes) {
+			if (r.getCost() == targetLength) {
+				int rainbow = 0, black = 0, blue = 0, green = 0, orange = 0, purple = 0, red = 0, white = 0, yellow = 0;
+				for (TrainCard t : super.getHand()) {
+					switch(t.getColor()) {
+						case black:
+							black++;
+							break;
+						case blue:
+							blue++;
+							break;
+						case green:
+							green++;
+							break;
+						case orange:
+							orange++;
+							break;
+						case purple:
+							purple++;
+							break;
+						case rainbow:
+							rainbow++;
+							break;
+						case red:
+							red++;
+							break;
+						case white:
+							white++;
+							break;
+						case yellow:
+							yellow++;
+							break;
+						default:
+							System.out.println("Something went wrong in method pickWantedRoutes spot 1");
+							break;
+					}
+				}
+				if (r.getColor() == TrainCardColor.rainbow) {
+					TrainCardColor color = TrainCardColor.rainbow; //default, but not technically
+					if (black >= r.getCost())
+						color = TrainCardColor.black;
+					else if (blue >= r.getCost())
+						color = TrainCardColor.blue;
+					else if (green >= r.getCost())
+						color = TrainCardColor.green;
+					else if (orange >= r.getCost())
+						color = TrainCardColor.orange;
+					else if (purple >= r.getCost())
+						color = TrainCardColor.purple;
+					else if (red >= r.getCost())
+						color = TrainCardColor.red;
+					else if (white >= r.getCost())
+						color = TrainCardColor.white;
+					else if (yellow >= r.getCost())
+						color = TrainCardColor.yellow;
+					else if (black + rainbow >= r.getCost())
+						color = TrainCardColor.black;
+					else if (blue + rainbow >= r.getCost())
+						color = TrainCardColor.blue;
+					else if (green + rainbow >= r.getCost())
+						color = TrainCardColor.green;
+					else if (orange + rainbow >= r.getCost())
+						color = TrainCardColor.orange;
+					else if (purple + rainbow >= r.getCost())
+						color = TrainCardColor.purple;
+					else if (red + rainbow >= r.getCost())
+						color = TrainCardColor.red;
+					else if (white + rainbow >= r.getCost())
+						color = TrainCardColor.white;
+					else if (yellow + rainbow >= r.getCost())
+						color = TrainCardColor.yellow;
+					else {}
+					super.claimRoute(r, color);
+				}
+				else {
+					super.claimRoute(r, r.getColor());
+				}
+				break;
+			}
+		}
+	}
+
+	
+	private void drawColor(TrainCardColor desiredColor) {
+		System.out.println("Desired: " + desiredColor);
+
+		ArrayList<TrainCard> table = super.getFaceUpCards();
+		
+		for (int i = 0; i < table.size(); i++) {
+			System.out.println(table.get(i).getColor());
+		}
+		
+		//Always take rainbows if available
+		for (int i = 0; i < table.size(); i++) {
+			if (table.get(i).getColor() == TrainCardColor.rainbow) {
+				super.drawTrainCard(i+1);
+				return;
+			}
+		}
+		
+		//Otherwise, take what you were originally looking for
+		for (int i = 0; i < table.size(); i++) {
+			if (table.get(i).getColor() == desiredColor) {
+				super.drawTrainCard(i+1);
+				return;
+			}
+		}
+		
+		//If couldn't find rainbow or desired color, draw random
+		//System.out.println("Here");
+		super.drawTrainCard(0);
+	}
+	
+	/**
+	 * Variation of Dijkstra's shortest path algorithm.
+	 * @param from Start city
+	 * @param to End city
+	 * @return Shortest path. Will NOT include routes bought by opponent.
+	 */
+	private ArrayList<Route> shortestPath(Destination from, Destination to){
+		/* If same, just return false */
+		//if(from == to) return 0;
+		
+		/* Open and Closed lists (breadth first search) */
+		HashMap<Destination, Integer> openList = new HashMap<Destination, Integer>();
+		HashMap<Destination, Integer> closedList = new HashMap<Destination, Integer>();
+		HashMap<Destination, Destination> parentList = new HashMap<Destination, Destination>();
+		
+		openList.put(from, 0);
+		parentList.put(from, null);
+		
+		while(openList.size() > 0){
+			
+			/* Pop something off the open list, if destination then return true */
+			Destination next = null;
+			int minCost = 9999;
+			for(Destination key : openList.keySet()){
+				if(openList.get(key) < minCost){
+					next = key;
+					minCost = openList.get(key);
+				}
+			
+			}
+			
+			/* Take it off the open list and put on the closed list */
+			openList.remove(next);
+			closedList.put(next, minCost);
+			
+			/* If this is the destination, then return!!!! */
+			//if(next == to) return closedList.get(next);
+			
+			/* Get all the neighbors of the next city that aren't on open or closed lists already */
+			for(Destination neighbor : Routes.getInstance().getNeighbors(next)){
+				if(closedList.containsKey(neighbor)) continue;
+				
+				/* get route between next and neighbor and see if better than neighbor's value */
+				ArrayList<Route> routesToNeighbor = Routes.getInstance().getRoutes(next, neighbor);
+				for(Route routeToNeighbor : routesToNeighbor){
+					if (routeToNeighbor.getOwner() == null || routeToNeighbor.getOwner() == this) {//
+						int newCost = closedList.get(next) + routeToNeighbor.getCost();
+						
+						if(openList.containsKey(neighbor)){	
+							if(newCost < openList.get(neighbor)){
+								openList.put(neighbor, newCost);
+								parentList.put(neighbor, next);
+							}
+						}
+						else{
+							openList.put(neighbor, newCost);
+							parentList.put(neighbor, next);
+						}
+					}
+				}
+			}
+		}
+		
+		if (parentList.keySet().contains(to)) {
+			ArrayList<Route> path = new ArrayList<Route>();
+			Destination curr = to;
+			while (parentList.get(curr) != null) {
+				path.addAll(Routes.getInstance().getRoutes(curr, parentList.get(curr)));
+				curr = parentList.get(curr);
+			}
+			return path;
+		}
+		else {
+			return new ArrayList<Route>();
+		}
+	}
+	
+	
+	//////////////////////////
+	// ENDGAME methods
+	/////////////////////////
+	
+	private int getOpponentTrainsLeft() {
+		int initialTrains = 45;
+		int usedTrains = 0;
+		for (Route r : Routes.getInstance().getAllRoutes()) {
+			if (r.getOwner() != null && r.getOwner() != this)
+				usedTrains += r.getCost();
+		}
+		return initialTrains - usedTrains;
+	}
+	
+	private void buyAnyLongestRoute() {
+		ArrayList<Route> buyableRoutes = getBuyableRoutes();
+		if (buyableRoutes.size() > 0) {
+			Route longest = buyableRoutes.get(0);
+			for (Route r : buyableRoutes) {
+				if (r.getPoints() > longest.getPoints()) {
+					longest = r;
+				}
+			}
+			if (longest.getColor() == TrainCardColor.rainbow) {
+				//claim with the first color you find for which you have enough cards
+				int rainbow = 0, black = 0, blue = 0, green = 0, orange = 0, purple = 0, red = 0, white = 0, yellow = 0;
+				for (TrainCard t : super.getHand()) {
+					switch(t.getColor()) {
+						case black:
+							black++;
+							break;
+						case blue:
+							blue++;
+							break;
+						case green:
+							green++;
+							break;
+						case orange:
+							orange++;
+							break;
+						case purple:
+							purple++;
+							break;
+						case rainbow:
+							rainbow++;
+							break;
+						case red:
+							red++;
+							break;
+						case white:
+							white++;
+							break;
+						case yellow:
+							yellow++;
+							break;
+						default:
+							System.out.println("Something went wrong");
+							break;
+					}
+				}
+				if ((black + rainbow) >= longest.getCost()) { super.claimRoute(longest, TrainCardColor.black); }
+				else if ((blue + rainbow) >= longest.getCost()) { super.claimRoute(longest, TrainCardColor.blue); }
+				else if ((green + rainbow) >= longest.getCost()) { super.claimRoute(longest, TrainCardColor.green); }
+				else if ((orange + rainbow) >= longest.getCost()) { super.claimRoute(longest, TrainCardColor.orange); }
+				else if ((purple + rainbow) >= longest.getCost()) { super.claimRoute(longest, TrainCardColor.purple); }
+				else if ((red + rainbow) >= longest.getCost()) { super.claimRoute(longest, TrainCardColor.red); }
+				else if ((white + rainbow) >= longest.getCost()) { super.claimRoute(longest, TrainCardColor.white); }
+				else if ((yellow + rainbow) >= longest.getCost()) { super.claimRoute(longest, TrainCardColor.yellow); }
+				else if ((rainbow) >= longest.getCost()) { super.claimRoute(longest, TrainCardColor.rainbow); }
+				else { System.out.println("Something went wrong"); }
+			}
+			else {
+				super.claimRoute(longest, longest.getColor());
+			}
+		}
+		else {
+			super.drawTrainCard(0);
+		}
+	}
+	
+	private ArrayList<Route> getBuyableRoutes() {
+		ArrayList<Route> temp = new ArrayList<Route>();
+		for (Route r : Routes.getInstance().getAllRoutes()) {
+			if (canBuy(r))
+				temp.add(r);
+		}
+		return temp;
+	}
+	
+	/**
+	 * @param route
+	 * @return true if route is unclaimed and can be bought with current resources
+	 */
+	private boolean canBuy(Route route) {
+		if (route.getOwner() == null  &&  super.getNumTrainPieces() >= route.getCost() && !super.getPlayerClaimedRoutes().contains(route)) {
+			//Categorize hand by color
+			int rainbow = 0, black = 0, blue = 0, green = 0, orange = 0, purple = 0, red = 0, white = 0, yellow = 0;
+			for (TrainCard t : super.getHand()) {
+				switch(t.getColor()) {
+					case black:
+						black++;
+						break;
+					case blue:
+						blue++;
+						break;
+					case green:
+						green++;
+						break;
+					case orange:
+						orange++;
+						break;
+					case purple:
+						purple++;
+						break;
+					case rainbow:
+						rainbow++;
+						break;
+					case red:
+						red++;
+						break;
+					case white:
+						white++;
+						break;
+					case yellow:
+						yellow++;
+						break;
+					default:
+						System.out.println("Something went wrong in method 'canBuy'");
+						break;
+				}
+			}
+			//See if have cards needed to buy
+			if (route.getColor() == TrainCardColor.black) { return (black + rainbow) >= route.getCost(); }
+			else if (route.getColor() == TrainCardColor.blue) { return (blue + rainbow) >= route.getCost(); }
+			else if (route.getColor() == TrainCardColor.green) { return (green + rainbow) >= route.getCost(); }
+			else if (route.getColor() == TrainCardColor.orange) { return (orange + rainbow) >= route.getCost(); }
+			else if (route.getColor() == TrainCardColor.purple) { return (purple + rainbow) >= route.getCost(); }
+			else if (route.getColor() == TrainCardColor.red) { return (red + rainbow) >= route.getCost(); }
+			else if (route.getColor() == TrainCardColor.white) { return (white + rainbow) >= route.getCost(); }
+			else if (route.getColor() == TrainCardColor.yellow) { return (yellow + rainbow) >= route.getCost(); }
+			else if (route.getColor() == TrainCardColor.rainbow) {
+				return (black + rainbow) >= route.getCost() || (blue + rainbow) >= route.getCost()
+						|| (green + rainbow) >= route.getCost() || (orange + rainbow) >= route.getCost()
+						|| (purple + rainbow) >= route.getCost() || (red + rainbow) >= route.getCost()
+						|| (white + rainbow) >= route.getCost() || (yellow + rainbow) >= route.getCost()
+						|| (rainbow) >= route.getCost();
+			}
+			else {
+				System.out.println("Something went wrong in method 'canBuy'");
+				return false;
+			}
+		}
+		else
+			return false;
+	}
+	
+	
+}

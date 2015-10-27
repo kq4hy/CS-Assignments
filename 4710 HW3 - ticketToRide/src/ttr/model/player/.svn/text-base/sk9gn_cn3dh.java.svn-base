@@ -1,0 +1,282 @@
+/* Name: Sri Kodakalla & Corneilius Nelson
+ * Assignment 3 - Ticket To Ride
+ */
+
+package ttr.model.player;
+import java.util.ArrayList;
+import java.util.Collections;
+
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+// AI player takes all the methods of the Player class
+public class sk9gn_cn3dh extends Player{
+	private TrainCardColor temp; // temporary storage for the color of the card
+	
+	public sk9gn_cn3dh(String name) {
+		super("sk9gn_cn3dh");
+	}
+	
+	public boolean checkTrainRoutes(int numOfTrains) {
+		boolean possibleRoutesExist = false; 
+		ArrayList<Route> possibleRoutes = new ArrayList<Route>();
+		
+		// check if there are any routes of this length that are not claimed
+		for (Route route : Routes.getInstance().getAllRoutes()) {
+			if ((route.getCost() == numOfTrains) && (Routes.getInstance().isRouteClaimed(route) == false)) {
+				// if there is a route of length & it is not claimed
+				possibleRoutes.add(route); 
+			}
+		}
+		
+		// if routes exist, then return true
+		if (!(possibleRoutes.size() == 0)) {
+			possibleRoutesExist = true;
+		} else { // otherwise, return false
+			possibleRoutesExist = false;
+		}
+		
+		return possibleRoutesExist; 
+	}
+
+	// implement makeMove() using methods of the Player class: 
+	@Override
+	public void makeMove() {
+		int counter = 0;
+		
+		// CHECKING FOR A WILD CARD
+		// if there is a wild card on the board, grab that one
+		for (TrainCard card : super.getFaceUpCards()) {
+			counter++;
+			temp = card.getColor();
+			
+			if (card.getColor().equals(TrainCardColor.rainbow)) {
+				temp = card.getColor(); // store the rainbow color
+				super.drawTrainCard(counter); // expected to end turn when this method is called
+				System.out.println("Selected a rainbow card. ");
+			}
+		}
+		
+		// DO THIS IF THERE IS NO WILD CARD
+		// assuming if there was a wild card - we would have selected it already
+		if (!(temp == TrainCardColor.rainbow)) {
+			ArrayList<Integer> numTrainCards = new ArrayList<Integer>();
+			
+			// checks if any of the cards are == 6
+			for (TrainCardColor current : TrainCardColor.values()) {
+				if (current != TrainCardColor.rainbow) {
+					
+					// EXECUTE ONLY IF PLAYER HAS 6 CARDS OF ONE COLOR
+					if (checkTrainRoutes(6) == true) {
+						if (super.getNumTrainCardsByColor(current) == 6) {
+							for (Route route : Routes.getInstance().getAllRoutes()) {
+								if (route.getCost() == 6) {
+									// if there is a route of that color (which there will be) && that route is not claimed									
+									if ((route.getColor().equals(current)) && (Routes.getInstance().isRouteClaimed(route) == false)) {
+											super.claimRoute(route, current); // expected to end turn when this method is called											
+									}
+									// if there is a rainbow route && it is not claimed
+									else if ((route.getColor().equals(TrainCardColor.rainbow)) && (Routes.getInstance().isRouteClaimed(route) == false)){
+										// if our colored route is already claimed, then
+										for (Route route2 : Routes.getInstance().getAllRoutes()) {
+											if (route2.getCost() == 6) {
+												// the one colored route of that size is claimed
+												if (route2.getColor().equals(current) && (Routes.getInstance().isRouteClaimed(route2) == true)) {
+													super.claimRoute(route, current); 
+												}												
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					// EXECUTE ONLY IF PLAYER HAS 5 CARDS OF ONE COLOR
+					if ((checkTrainRoutes(5) == true) && (checkTrainRoutes(6) == false)) {
+						if (super.getNumTrainCardsByColor(current) == 5) {
+							for (Route route : Routes.getInstance().getAllRoutes()) {
+								if (route.getCost() == 5) {
+									// if there is a route of that color (which there will be) && that route is not claimed									
+									if ((route.getColor().equals(current)) && (Routes.getInstance().isRouteClaimed(route) == false)) {
+											super.claimRoute(route, current); // expected to end turn when this method is called											
+									}
+									// if there is a rainbow route && it is not claimed
+									else if ((route.getColor().equals(TrainCardColor.rainbow)) && (Routes.getInstance().isRouteClaimed(route) == false)){
+										// if our colored route is already claimed, then
+										for (Route route2 : Routes.getInstance().getAllRoutes()) {
+											if (route2.getCost() == 5) {
+												// the one colored route of that size is claimed
+												if (route2.getColor().equals(current) && (Routes.getInstance().isRouteClaimed(route2) == true)) {
+													super.claimRoute(route, current); 
+												}												
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					// EXECUTE ONLY IF PLAYER HAS 4 CARDS OF ONE COLOR
+					if ((checkTrainRoutes(4) == true) && (checkTrainRoutes(5) == false) && (checkTrainRoutes(6) == false)) {
+						if (super.getNumTrainCardsByColor(current) == 4) {
+							for (Route route : Routes.getInstance().getAllRoutes()) {
+								if (route.getCost() == 4) {
+									// if there is a route of that color (which there will be) && that route is not claimed									
+									if ((route.getColor().equals(current)) && (Routes.getInstance().isRouteClaimed(route) == false)) {
+											super.claimRoute(route, current); // expected to end turn when this method is called											
+									}
+									// if there is a rainbow route && it is not claimed
+									else if ((route.getColor().equals(TrainCardColor.rainbow)) && (Routes.getInstance().isRouteClaimed(route) == false)){
+										// if our colored route is already claimed, then
+										for (Route route2 : Routes.getInstance().getAllRoutes()) {
+											if (route2.getCost() == 4) {
+												// the one colored route of that size is claimed
+												if (route2.getColor().equals(current) && (Routes.getInstance().isRouteClaimed(route2) == true)) {
+													super.claimRoute(route, current); 
+												}												
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					// EXECUTE ONLY IF PLAYER HAS 3 CARDS OF ONE COLOR
+					if ((checkTrainRoutes(3) == true) && (checkTrainRoutes(4) == false) && (checkTrainRoutes(5) == false) && (checkTrainRoutes(6) == false)) {
+						if (super.getNumTrainCardsByColor(current) == 3) {
+							for (Route route : Routes.getInstance().getAllRoutes()) {
+								if (route.getCost() == 3) {
+									// if there is a route of that color (which there will be) && that route is not claimed									
+									if ((route.getColor().equals(current)) && (Routes.getInstance().isRouteClaimed(route) == false)) {
+											super.claimRoute(route, current); // expected to end turn when this method is called											
+									}
+									// if there is a rainbow route && it is not claimed
+									else if ((route.getColor().equals(TrainCardColor.rainbow)) && (Routes.getInstance().isRouteClaimed(route) == false)){
+										// if our colored route is already claimed, then
+										for (Route route2 : Routes.getInstance().getAllRoutes()) {
+											if (route2.getCost() == 3) {
+												// the one colored route of that size is claimed
+												if (route2.getColor().equals(current) && (Routes.getInstance().isRouteClaimed(route2) == true)) {
+													super.claimRoute(route, current); 
+												}												
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					// EXECUTE ONLY IF PLAYER HAS 2 CARDS OF ONE COLOR
+					if ((checkTrainRoutes(2) == true) && (checkTrainRoutes(3) == false) && (checkTrainRoutes(4) == false) && (checkTrainRoutes(5) == false) && (checkTrainRoutes(6) == false)) {
+						if (super.getNumTrainCardsByColor(current) == 2) {
+							for (Route route : Routes.getInstance().getAllRoutes()) {
+								if (route.getCost() == 2) {
+									// if there is a route of that color (which there will be) && that route is not claimed									
+									if ((route.getColor().equals(current)) && (Routes.getInstance().isRouteClaimed(route) == false)) {
+											super.claimRoute(route, current); // expected to end turn when this method is called											
+									}
+									// if there is a rainbow route && it is not claimed
+									else if ((route.getColor().equals(TrainCardColor.rainbow)) && (Routes.getInstance().isRouteClaimed(route) == false)){
+										// if our colored route is already claimed, then
+										for (Route route2 : Routes.getInstance().getAllRoutes()) {
+											if (route2.getCost() == 2) {
+												// the one colored route of that size is claimed
+												if (route2.getColor().equals(current) && (Routes.getInstance().isRouteClaimed(route2) == true)) {
+													super.claimRoute(route, current); 
+												}												
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					// EXECUTE ONLY IF PLAYER HAS 1 CARDS OF ONE COLOR
+					if ((checkTrainRoutes(1) == true) && (checkTrainRoutes(2) == false) && (checkTrainRoutes(3) == false) && (checkTrainRoutes(4) == false) && (checkTrainRoutes(5) == false) && (checkTrainRoutes(6) == false)) {
+						if (super.getNumTrainCardsByColor(current) == 1) {
+							for (Route route : Routes.getInstance().getAllRoutes()) {
+								if (route.getCost() == 1) {
+									// if there is a route of that color (which there will be) && that route is not claimed									
+									if ((route.getColor().equals(current)) && (Routes.getInstance().isRouteClaimed(route) == false)) {
+											super.claimRoute(route, current); // expected to end turn when this method is called											
+									}
+									// if there is a rainbow route && it is not claimed
+									else if ((route.getColor().equals(TrainCardColor.rainbow)) && (Routes.getInstance().isRouteClaimed(route) == false)){
+										// if our colored route is already claimed, then
+										for (Route route2 : Routes.getInstance().getAllRoutes()) {
+											if (route2.getCost() == 1) {
+												// the one colored route of that size is claimed
+												if (route2.getColor().equals(current) && (Routes.getInstance().isRouteClaimed(route2) == true)) {
+													super.claimRoute(route, current); 
+												}												
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					// EXECUTE ONLY IF PLAYER HAS 4 CARDS OF ONE COLOR
+					if ((checkTrainRoutes(4) == true) && (checkTrainRoutes(5) == false) && (checkTrainRoutes(6) == false)) {
+						if (super.getNumTrainCardsByColor(current) == 4) {
+							for (Route route : Routes.getInstance().getAllRoutes()) {
+								if (route.getCost() == 4) {
+									// if there is a route of that color (which there will be) && that route is not claimed									
+									if ((route.getColor().equals(current)) && (Routes.getInstance().isRouteClaimed(route) == false)) {
+											super.claimRoute(route, current); // expected to end turn when this method is called											
+									}
+									// if there is a rainbow route && it is not claimed
+									else if ((route.getColor().equals(TrainCardColor.rainbow)) && (Routes.getInstance().isRouteClaimed(route) == false)){
+										// if our colored route is already claimed, then
+										for (Route route2 : Routes.getInstance().getAllRoutes()) {
+											if (route2.getCost() == 4) {
+												// the one colored route of that size is claimed
+												if (route2.getColor().equals(current) && (Routes.getInstance().isRouteClaimed(route2) == true)) {
+													super.claimRoute(route, current); 
+												}												
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			int counter2 = 0; // counter to find max
+			int storeMax = 0; // storage to find max
+			TrainCardColor maxColor = null; // stores max color to draw
+			
+			// WHEN PLAYER DOESN'T HAVE THE ABILITY TO CLAIM A ROUTE
+			// FIND THE MAX # OF TRAIN CARDS PLAYER HAS
+			for (TrainCard card2 : super.getFaceUpCards()) {
+				// if new value is greater than current stored max value
+				// if there is a tie in colors, the one first in the array gets chosen
+				if (getNumTrainCardsByColor(card2.getColor()) > storeMax) {
+					storeMax = getNumTrainCardsByColor(card2.getColor());
+					maxColor = card2.getColor(); 
+				}
+			}
+			
+			// FIND COLOR MAXIMUM - DRAW THAT COLOR
+			// loop through face up cards to see if max color is in it
+			for (TrainCard card3 : super.getFaceUpCards()) {
+				counter2++;
+				if (card3.getColor().equals(maxColor)) {
+					super.drawTrainCard(counter2); // draw the max color
+				}
+			}
+			
+			// DRAW FROM THE DECK IF MAX COLOR IS NOT THERE
+			// loop through face up cards again to see if max color is NOT in it
+			for (TrainCard card4 : super.getFaceUpCards()) {
+				if (!(card4.getColor().equals(maxColor))) {
+					super.drawTrainCard(0); // draw from the deck
+				}
+			}
+		}
+	}
+}

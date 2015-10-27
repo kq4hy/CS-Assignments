@@ -1,0 +1,252 @@
+package ttr.model.player;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.PriorityQueue;
+
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+public class Killer_Shin extends Player{
+	//Nested DestinationNode Class
+	public class DestinationNode {
+		Destination data;
+		Destination goal;
+		DestinationNode parent;
+		int cost;
+		int f;
+		public DestinationNode(Destination d, Destination g, DestinationNode p, int c){
+			data = d;
+			parent = p;
+			cost = c;
+			f = c + Routes.getInstance().shortestPathcost(data, g);
+		}
+		
+		public DestinationNode getParent() {
+			return parent;
+		}
+		public Destination getData() {
+			return data;
+		}
+		public int getH(){
+			return f;
+		}
+	}
+
+	//Nexted DestinationNodeComparator Class
+	public class DestinationNodeComparator implements Comparator<DestinationNode> {
+		public int compare(DestinationNode arg1, DestinationNode arg2) {
+			if (arg1.getH() > arg2.getH()) {
+				return 1;
+			}
+			else if (arg1.getH()  < arg2.getH() ){
+				return -1;
+			}
+			else {
+				return 0;
+			}
+		}
+		
+	}
+	
+	ArrayList<TrainCard> hand;
+	ArrayList<DestinationTicket> tickets;
+	TrainCardColor color;
+	HashMap<TrainCardColor, Integer> numCards = new HashMap<TrainCardColor, Integer>();
+	ArrayList<ArrayList<Route>> potentialRoutes = new ArrayList<ArrayList<Route>>();
+	ArrayList<TrainCard> faceups = new ArrayList<TrainCard>();
+	ArrayList colorsNeeded = new ArrayList<TrainCardColor>();
+	int times = 0;
+	int dTrains = 0;
+	public Killer_Shin(String name) {
+		super(name);
+	}
+	
+	public Killer_Shin() {
+		super("Killer");
+	}
+
+	
+	public void moveForward(TrainCardColor m, int r) {
+		ArrayList<Route> allRoutes = Routes.getInstance().getAllRoutes();
+		Route best = new Route(Destination.Dallas, Destination.Houston, 1, color.rainbow) ;
+		for (Route attempt: allRoutes){
+			if (!colorsNeeded.contains(attempt.getColor()) && attempt.getCost() <= super.getNumTrainPieces() && attempt.getPoints() > best.getPoints()){
+				if (!attempt.getColor().equals(color.rainbow) && check(attempt, attempt.getColor(), r) ) {
+					best = attempt;
+				}
+				else if (attempt.getColor().equals(color.rainbow) && check(attempt, m, r) ) {
+					best = attempt;
+				}
+			}
+		}
+		
+		if (super.getNumTrainPieces() - best.getCost() >= dTrains) {
+			if (best.getPoints() >= 11) {
+				if (check(best, best.getColor(), r)) {
+					super.claimRoute(best, best.getColor());
+				}
+				if (check(best, m , r)) {
+					super.claimRoute(best, m);
+				}
+			}
+			//Have different stages of this
+			if (super.getNumTrainPieces() <= 15 && best.getPoints() >= 10){
+				if (check(best, best.getColor(), r)) {
+					super.claimRoute(best, best.getColor());
+				}
+				if (check(best, m , r)) {
+					super.claimRoute(best, m);
+				}	
+			}
+			
+			if (super.getNumTrainPieces() <= 10){
+				if (check(best, best.getColor(), r)) {
+					super.claimRoute(best, best.getColor());
+				}
+				if (check(best, m , r)) {
+					super.claimRoute(best, m);
+				}	
+			}
+		}
+			
+		}
+		//Add a finisher so we don't get stuck at 1
+	
+	public void adjustNums(TrainCard t) {
+		if (numCards.containsKey(t.getColor())) {
+			numCards.put(t.getColor(), numCards.get(t.getColor()) + 1);
+		}
+		else {
+			numCards.put(t.getColor(), 1);
+		}
+	}
+	
+	public void findPath(Destination f, Destination t) {
+		PriorityQueue<DestinationNode> open = new PriorityQueue<DestinationNode>(10, new DestinationNodeComparator());
+		open.add(new DestinationNode(f, t, null, 0));
+		ArrayList<Destination> closed = new ArrayList<Destination>();
+		DestinationNode n;
+		while (!open.isEmpty()) {
+			n = open.poll();
+			closed.add(n.data);
+			if (n.getData().equals(t)) {
+				while (n.getParent() != null) {
+					if (!Routes.getInstance().hasCompletedRoute(this, n.parent.data, n.data)){
+						potentialRoutes.add(Routes.getInstance().getRoutes(n.data, n.parent.data));
+					}
+					n = n.getParent();
+				}
+				return;
+			}
+			for (Destination adj: Routes.getInstance().getNeighbors(n.getData())) {
+				if (Routes.getInstance().isRouteClaimed(new Route(n.data, adj, 1, color.rainbow)) && !Routes.getInstance().hasCompletedRoute(this, adj, n.data)) {
+					continue;
+				}
+				else if (!closed.contains(adj)){ 
+					open.add(new DestinationNode(adj, t, n, 0));
+				}
+			}
+		}
+		return;
+	}
+	
+	//Fix this!!
+	public boolean check(Route r, TrainCardColor c, int rbow){
+
+		if (!Routes.getInstance().isRouteClaimed(r) && numCards.get(c) != null && 
+				numCards.get(c) + rbow >= r.getCost()){
+			if (r.getColor().equals(c) || r.getColor().equals(color.rainbow))
+				return true;
+		}
+		return false;
+	}
+	@Override
+	public void makeMove() {
+		potentialRoutes.clear();
+		dTrains = 0;
+		//Add DTs, this should be in the beginning of the game
+		tickets = super.getDestinationTickets();
+		for (DestinationTicket dt: tickets) {
+			
+			findPath(dt.getFrom(),dt.getTo());
+		}
+		
+		if (times < 0){
+			super.drawDestinationTickets();
+			times++;
+		}
+		
+		int rainbow = 0;
+		TrainCardColor max = color.green;
+		int greatest = 0;
+		hand = super.getHand();
+		faceups = super.getFaceUpCards();
+		
+		//Check the tickets and see if there is a short path using available routes
+	
+		
+		//This code segment needs to assign the max to the greatest color, and also set numbers of card color type
+
+		for (TrainCard t: hand) {
+			adjustNums(t);
+			if (numCards.get(t.getColor()) >= greatest && !t.getColor().equals(color.rainbow)){
+				greatest = numCards.get(t.getColor());
+				max = t.getColor();
+			}		
+		}
+		
+		if (numCards.containsKey(color.rainbow)) {
+			rainbow = numCards.get(color.rainbow);
+		}
+		
+		Route taken = null;
+		for (ArrayList<Route> r: potentialRoutes) {
+				for (Route d: r) {
+						if (check(d, d.getColor(), rainbow)){
+							super.claimRoute(d, d.getColor());
+						}
+						else if (check(d, max, rainbow)){
+							super.claimRoute(d, max);
+						}
+						else if (!d.getColor().equals(color.rainbow)){
+							colorsNeeded.add(d.getColor());
+							dTrains += d.getCost();
+						}
+						
+				}
+			}
+		
+		//if (potentialRoutes.isEmpty()){
+			moveForward(max, rainbow);
+		//}
+		
+		//Pick the best card you can if no good moves can be made
+		for (int i = 0; i < faceups.size(); i++) {
+			if (faceups.get(i).getColor().equals(color.rainbow)) {
+				super.drawTrainCard(i + 1);
+			}
+			for (ArrayList<Route> r: potentialRoutes) {
+				for (Route d: r) {
+					if (faceups.get(i).getColor().equals(d.getColor())){
+						super.drawTrainCard(i + 1);
+					}
+				}
+			}
+			if (potentialRoutes.isEmpty() && faceups.get(i).getColor().equals(max)) {
+				super.drawTrainCard(i + 1);
+			}
+		}
+		super.drawTrainCard(0);
+		max = null;
+		colorsNeeded.clear();
+		numCards.clear();
+	}
+			
+}
+ 

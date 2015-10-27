@@ -1,0 +1,331 @@
+package ttr.model.player;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map.Entry;
+
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+public class AI extends Player {
+
+	HashMap<TrainCardColor, Integer> trainCards = new HashMap<TrainCardColor, Integer>();
+	ArrayList<TrainCard> currentHand = getHand();
+	ArrayList<Destination> target = new ArrayList<Destination>();
+	ArrayList<Route> routes = Routes.getInstance().getAllRoutes();
+	ArrayList<Destination> access = new ArrayList<Destination>();
+	ArrayList<Route> routeIwant = new ArrayList<Route>();
+	ArrayList<DestinationTicket> myDeck = new ArrayList<DestinationTicket>();
+	Destination currentGoal = null;
+	Destination currentGoal2 = null;
+	boolean STOP = false;
+	int first = 0;
+	ArrayList<DestinationTicket> obese = new ArrayList<DestinationTicket>();
+
+
+	public AI(String name) {
+		super(name);
+	}
+
+	public AI() {
+		super("Cool Player");
+	}
+
+	@Override
+	public void makeMove() {
+		Update();
+		first++;
+		for(Route att : routeIwant) {/*
+			if((att.getColor() == TrainCardColor.rainbow) && !claimedByMe(att)) {
+				for(TrainCardColor gt : trainCards.keySet()) {
+				if(trainCards.get(gt) > att.getCost()) {
+					claimRoute(att, att.getColor());
+					if(att.getOwner() == this) {
+						STOP = true;
+					}
+					if(STOP) {
+						break;
+					}
+				}
+			}
+			}
+			if(!STOP) {
+			if((att.getCost() <= (trainCards.getOrDefault(att.getColor(), 0) 
+					+ trainCards.getOrDefault(TrainCardColor.rainbow, 0))) && !claimedByMe(att)) {
+				claimRoute(att, att.getColor());
+				if(att.getOwner() == this) {
+					STOP = true;
+				}
+			}
+		}*/
+		
+			if(!Routes.getInstance().isRouteClaimed(att)) {
+				claimRoute(att, TrainCardColor.rainbow);
+				if(att.getOwner() == this) {
+					STOP = true;
+				}
+			}
+			if(!Routes.getInstance().isRouteClaimed(att)){
+				claimRoute(att, TrainCardColor.yellow);
+				if(att.getOwner() == this) {
+					STOP = true;
+				}
+			}
+			if(!Routes.getInstance().isRouteClaimed(att)){
+				claimRoute(att, TrainCardColor.red);
+				if(att.getOwner() == this) {
+					STOP = true;
+				}
+			}
+			if(!Routes.getInstance().isRouteClaimed(att)){
+				claimRoute(att, TrainCardColor.blue);
+				if(att.getOwner() == this) {
+					STOP = true;
+				}
+			}
+			if(!Routes.getInstance().isRouteClaimed(att)){
+				claimRoute(att, TrainCardColor.white);
+				if(att.getOwner() == this) {
+					STOP = true;
+				}
+			}
+			if(!Routes.getInstance().isRouteClaimed(att)){
+				claimRoute(att, TrainCardColor.orange);
+				if(att.getOwner() == this) {
+					STOP = true;
+				}
+			}
+			if(!Routes.getInstance().isRouteClaimed(att)){
+				claimRoute(att, TrainCardColor.green);
+				if(att.getOwner() == this) {
+					STOP = true;
+				}
+			}
+
+			if(!Routes.getInstance().isRouteClaimed(att)){
+				claimRoute(att, TrainCardColor.black);
+				if(att.getOwner() == this) {
+					STOP = true;
+				}
+			}
+			if(!Routes.getInstance().isRouteClaimed(att)){
+				claimRoute(att, TrainCardColor.purple);
+			}
+
+			}
+		
+		if(getDestinationTickets().isEmpty()) {
+			drawDestinationTickets();
+		}
+		
+		outerloop:
+			for (Route road : routes) {
+			for (TrainCard card: currentHand) {
+				if(road.getColor() == card.getColor()) {
+					if(road.getCost() <= (trainCards.getOrDefault(card.getColor(), 0) 
+							+ trainCards.getOrDefault(TrainCardColor.rainbow, 0))) {
+						if(!Routes.getInstance().isRouteClaimed(road)) {
+						claimRoute(road, card.getColor());
+						break outerloop;
+						}
+					}
+				}
+			}
+		}
+		int i = 0;
+		/*for(TrainCard k : getFaceUpCards()) {
+			i++;
+			if(k.getColor() == TrainCardColor.rainbow) {
+				drawTrainCard(i);
+			}
+		}*/
+		drawTrainCard(0);
+		STOP = true;
+		trainCards.clear();
+		target.clear();
+		access.clear();
+		routeIwant.clear();
+	}
+	
+	public void Update() {
+		STOP = false;
+		myDeck = getDestinationTickets();
+		for(DestinationTicket l: obese) {
+			myDeck.remove(l);
+		}
+		currentHand = getHand();
+		for (TrainCard card : currentHand) {
+			if(trainCards.containsKey(card.getColor())) {
+				//trainCards.replace(card.getColor(), getNumTrainCardsByColor(card.getColor()));
+			}
+			else {
+				trainCards.put(card.getColor(), getNumTrainCardsByColor(card.getColor()));
+			}
+		}
+		int maxCost = 0;
+		DestinationTicket go = null;
+		if(first == 0) {
+		for(DestinationTicket j: getDestinationTickets()) {
+			if(j.getValue() > maxCost) {
+				maxCost = j.getValue();
+				go = j;
+			}
+		}
+		currentGoal = go.getFrom();
+		currentGoal2 = Routes.getInstance().getNeighbors(currentGoal).get(0);
+	}
+		if(first > 0)  {
+			currentGoal = currentGoal2;
+			currentGoal2 = Routes.getInstance().getNeighbors(currentGoal).get(0);
+		}
+		routeIwant.addAll(Routes.getInstance().getRoutes(currentGoal, currentGoal2));
+		//ArrayList<Route> det = getShortRoute(currentGoal.getFrom(), currentGoal.getTo());
+	}
+	
+	public ArrayList<Route> getShortRoute(Destination d1, Destination d2) {
+		ArrayList<Destination> getBestPath = getBestPath(d1, d2);
+		ArrayList<Route> myRoutes = new ArrayList<Route>();
+		for(int i = 0; i < getBestPath.size()-2 ; i++) {
+			for(Route e: Routes.getInstance().getRoutes(getBestPath.get(i), getBestPath.get(i+1))) {
+				myRoutes.add(e);
+			}
+		}
+		return myRoutes;
+	}
+
+	public ArrayList<Destination> getBestPath(Destination from, Destination to) {
+		/* If same, just return false */
+		if(from == to) return null;
+		
+		/* Open and Closed lists (breadth first search) */
+		HashMap<destNode, Integer> openList = new HashMap<destNode, Integer>();
+		HashMap<destNode, Integer> closedList = new HashMap<destNode, Integer>();
+		destNode begin = new destNode(from);
+		destNode end = null;
+		ArrayList<Destination> thePath = new ArrayList<Destination>();
+
+		openList.put(begin, 0);
+		
+		while(openList.size() > 0){
+			
+			/* Pop something off the open list, if destination then return true */
+			destNode next = null;
+			int minCost = 9999;
+			for(destNode key : openList.keySet()) {
+				if(openList.get(key) < minCost){
+					next = key;
+					minCost = openList.get(key);
+				}
+			
+			}
+			
+			/* Take it off the open list and put on the closed list */
+			openList.remove(next);
+			closedList.put(next, minCost);
+			
+			/* If this is the destination, then return!!!! */
+			if(next.node == to) {
+				end = next;
+				break;
+			}
+			//return closedList.get(next);
+			//add to a list of destinations to go.
+			/* Get all the neighbors of the next city that aren't on open or closed lists already */
+			for(Destination neighbor : Routes.getInstance().getNeighbors(next.node)) {
+				destNode curr = new destNode(neighbor, next);
+				//System.out.println(curr.node);
+				if(closedList.containsKey(neighbor)) continue;
+				
+				/* get route between next and neighbor and see if better than neighbor's value */
+				ArrayList<Route> routesToNeighbor = Routes.getInstance().getRoutes(next.node, neighbor);
+				for(Route routeToNeighbor : routesToNeighbor){
+					int newCost = closedList.get(next) + routeToNeighbor.getCost();
+					if(Routes.getInstance().isRouteClaimed(routeToNeighbor)) {
+						if(claimedByMe(routeToNeighbor)) {
+							newCost -= routeToNeighbor.getCost();
+							newCost += 1;
+							if(openList.containsKey(neighbor)) {
+								if(newCost < openList.get(curr)) {
+								openList.put(curr, newCost);
+								}
+							}
+							else{
+								openList.put(curr, newCost);
+							}
+						}
+					}
+					else if(openList.containsKey(neighbor)){	
+						if(newCost < openList.get(curr)){
+							openList.put(curr, newCost);
+						}
+					}
+					else{
+						openList.put(curr, newCost);
+					}
+				}
+			}
+		}
+		destNode curr = end;
+		while(curr != begin) {
+			thePath.add(curr.node);
+			curr = curr.past;
+		}
+		thePath.add(begin.node);
+		//System.out.println(thePath);
+		return thePath;
+	}
+
+	public boolean claimedByMe(Route check) {
+		ArrayList<Route> claim = getPlayerClaimedRoutes();
+		for(Route k : claim) {
+			if(k == check) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+}
+
+class destNode {
+	Destination node;
+	destNode past;
+	Route connect;
+	int cost;
+	
+	public destNode(Destination curr) {
+		node = curr;
+		past = null;
+		connect = null;
+	}
+	
+	public destNode(Destination curr, destNode next) {
+		node = curr;
+		past = next;
+		connect = getRoute();
+	}
+
+	public Route getRoute() {
+		Route chosen = Routes.getInstance().getRoutes(node, past.node).get(0);
+		return chosen;
+	}
+	
+	@Override
+	public boolean equals(Object o) {
+		if(this.node == o) {
+			return true;
+		}
+		return false;
+	}
+	
+	@Override
+	public int hashCode() {
+		
+		return node.hashCode();
+	}
+}
+

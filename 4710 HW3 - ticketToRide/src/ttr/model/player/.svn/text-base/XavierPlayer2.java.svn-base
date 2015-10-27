@@ -1,0 +1,288 @@
+package ttr.model.player;
+
+import sun.security.krb5.internal.crypto.Des;
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+import java.util.*;
+
+/**
+ * Created by Xavier on 7/27/2015.
+ */
+public class XavierPlayer2 extends Player{
+
+    Player self = this;
+    Routes routesInstance = Routes.getInstance();
+
+    public XavierPlayer2(String name) {
+        super(name);
+    }
+    public XavierPlayer2(){
+        super("Xavier's Bot");
+    }
+
+    static final Comparator<Route> ROUTE_COST_COMPARATOR =
+            new Comparator<Route>() {
+                public int compare(Route r1, Route r2) {
+                    Integer i1 = r1.getCost();
+                    Integer i2 = r2.getCost();
+                    return i2.compareTo(i1);
+                }
+            };
+
+    public class TicketValueComparator implements Comparator<DestinationTicket> {
+        @Override
+        public int compare(DestinationTicket t1, DestinationTicket t2) {
+//            int value = t1.getValue(), cost = 0;
+//            for(Route r: shortestPathRoutes(t1.getFrom(), t1.getTo())) {
+//                if(!routesInstance.hasCompletedRoute(self, r.getDest1(), r.getDest2())) {
+//                    value += r.getPoints();
+//                    cost += r.getCost();
+//                }
+//            }
+//            Integer i1 = value / cost;
+//            value = t2.getValue();
+//            cost = 0;
+//            for(Route r: shortestPathRoutes(t2.getFrom(), t2.getTo())) {
+//                if(!routesInstance.hasCompletedRoute(self, r.getDest1(), r.getDest2())) {
+//                    value += r.getPoints();
+//                    cost += r.getCost();
+//                }
+//            }
+//            Integer i2 = value / cost;
+            Integer i1 = t1.getValue();
+            Integer i2 = t2.getValue();
+            return i2.compareTo(i1);
+        }
+    }
+
+    public class CardCountComparator implements Comparator<TrainCardColor> {
+        @Override
+        public int compare(TrainCardColor c1, TrainCardColor c2) {
+            Integer i1 = getNumTrainCardsByColor(c1);
+            Integer i2 = getNumTrainCardsByColor(c2);
+            return i2.compareTo(i1);
+        }
+    }
+
+    @Override
+    public void makeMove() {
+    	Routes blah = Routes.getInstance();
+    	
+        // If a face-up card is rainbow, draw that card
+        if (faceUpCardsContains(TrainCardColor.rainbow) && getNumTrainPieces() >= 10) {
+            drawTrainCard(TrainCardColor.rainbow);
+            return;
+        }
+
+        // Records the highest number of cards of a single color in your hand
+//        int maxColor = 0;
+//        PriorityQueue<TrainCardColor> colorsQueue = getHandColorPQ();
+//        for(TrainCard card : getHand())
+//            if (card.getColor() == colorsQueue.peek())
+//                maxColor++;
+
+        ArrayList<DestinationTicket> tickets = getDestinationTickets();
+        // If there are destination tickets to complete
+        if(tickets.size() > 0) {
+            // Sorts the tickets by value (descending order)
+            Collections.sort(tickets, new TicketValueComparator());
+
+            // For each incomplete ticket
+            for(int t = 0; t < tickets.size(); t++) {
+                DestinationTicket currentTicket = tickets.get(t);
+//                System.out.println("Current ticket: " + currentTicket);
+
+                ArrayList<Route> targetRoutes = new ArrayList<>();
+                // For each route in currentTicket
+                for (Route r : shortestPathRoutes(currentTicket.getFrom(), currentTicket.getTo())) {
+                    // If player has not completed the route, add to targetRoutes
+                    if (!routesInstance.hasCompletedRoute(self, r.getDest1(), r.getDest2()))
+                        targetRoutes.addAll(routesInstance.getRoutes(r.getDest1(), r.getDest2()));
+
+                }
+
+                // Sorts the routes by cost (descending order)
+
+                Collections.sort(targetRoutes, ROUTE_COST_COMPARATOR);
+
+                // Ends move if processRoutes returns true
+                if(processRoutes(targetRoutes))
+                    return;
+            }
+        } else if (getNumTrainPieces() > 25) {
+            super.drawDestinationTickets();
+            return;
+        } else {
+            ArrayList<Route> routes = new ArrayList<>();
+            for(Route r: routesInstance.getAllRoutes()) {
+                if(!routesInstance.isRouteClaimed(r))
+                    routes.add(r);
+            }
+
+            Collections.sort(routes, ROUTE_COST_COMPARATOR);
+
+            processRoutes(routes);
+        }
+
+        // If no other action was taken, draw TrainCard from deck
+        super.drawTrainCard(0);
+    }
+
+    private boolean processRoutes(ArrayList<Route> targetRoutes) {
+        // Iterates over routes in targetRoutes
+        for (int i = 0; i < targetRoutes.size(); i++) {
+            int cost = targetRoutes.get(i).getCost();
+            TrainCardColor color = targetRoutes.get(i).getColor();
+
+            if(cost > getNumTrainPieces())
+                continue;
+
+            // If route is grey (uncolored)
+            if (color == TrainCardColor.rainbow) {
+                PriorityQueue<TrainCardColor> colorsQueue = getHandColorPQ();
+
+                TrainCardColor highestCountColor = colorsQueue.poll();
+                // If rainbow has highest count, move on to next color or draw random card
+                if(highestCountColor == TrainCardColor.rainbow) {
+                    if(colorsQueue.size() > 0)
+                        highestCountColor = colorsQueue.poll();
+                    else {
+                        super.drawTrainCard(0);
+                        return true;
+                    }
+                }
+                // If the route can be claimed (with highest count color), do so
+                if(getNumTrainCardsByColor(highestCountColor) + getNumTrainCardsByColor(TrainCardColor.rainbow) >= cost) {
+                    super.claimRoute(targetRoutes.get(i), highestCountColor);
+                    return true;
+                }
+                // Else, draw color card from pile that you have the most of
+                else {
+                    while(!faceUpCardsContains(highestCountColor)) {
+                        // If you don't have any of the train card colors shown, exit and move on to next route
+                        if(colorsQueue.size() == 0) {
+                            highestCountColor = null;
+                            break;
+                        }
+                        highestCountColor = colorsQueue.poll();
+                    }
+
+                    if(highestCountColor != null) {
+                        drawTrainCard(highestCountColor);
+                        return true;
+                    }
+                }
+            }
+            // Else if route is colored and can be completed, do so
+            else if (getNumTrainCardsByColor(color) + getNumTrainCardsByColor(TrainCardColor.rainbow) >= cost) {
+                super.claimRoute(targetRoutes.get(i), color);
+                return true;
+            }
+            // Else if face-up card for route can be drawn, do so
+            else if (faceUpCardsContains(color)) {
+                drawTrainCard(color);
+                return true;
+            }
+            // Else move on to next route
+        }
+        return false;
+    }
+
+    private PriorityQueue<TrainCardColor> getHandColorPQ() {
+        PriorityQueue<TrainCardColor> colors = new PriorityQueue<>(9, new CardCountComparator());
+        // Populates cardCount with counts of each color card in hand
+        for(TrainCardColor c : TrainCardColor.values())
+            colors.add(c);
+        return colors;
+    }
+
+    private boolean faceUpCardsContains (TrainCardColor color) {
+        for(TrainCard card: getFaceUpCards())
+            if(card.getColor() == color)
+                return true;
+        return false;
+    }
+
+    // Draws a train card of the specified color from face-up cards
+    private void drawTrainCard (TrainCardColor color) {
+        for(int i = 0; i < getFaceUpCards().size(); i++)
+            if(getFaceUpCards().get(i).getColor() == color) {
+                super.drawTrainCard(i + 1);
+            }
+    }
+
+    /**
+     * Returns the routes in the shortest path between two cities
+     * */
+    private ArrayList<Route> shortestPathRoutes(Destination from, Destination to){
+        ArrayList<Route> path = new ArrayList<Route>();
+		/* If same, just return empty path */
+        if(from == to) return path;
+
+		/* Open and Closed lists (breadth first search) */
+        HashMap<Destination, Integer> openList = new HashMap<Destination, Integer>();
+        HashMap<Destination, Integer> closedList = new HashMap<Destination, Integer>();
+        HashMap<Destination, Destination> parents = new HashMap<>(); // destination, parent
+
+        openList.put(from, 0);
+
+        while(openList.size() > 0){
+
+			/* Pop something off the open list, if destination then return true */
+            Destination next = null;
+            int minCost = 9999;
+            for(Destination key : openList.keySet()){
+                if(openList.get(key) < minCost){
+                    next = key;
+                    minCost = openList.get(key);
+                }
+
+            }
+
+			/* Take it off the open list and put on the closed list */
+            openList.remove(next);
+            closedList.put(next, minCost);
+
+			/* If this is the destination, then return!!!! */
+            if(next == to) {
+                while (parents.containsKey(next)) {
+                    path.add(0, routesInstance.getRoutes(parents.get(next), next).get(0));
+                    next = parents.get(next);
+                }
+                return path;
+            }
+
+			/* Get all the neighbors of the next city that aren't on open or closed lists already */
+            for(Destination neighbor : routesInstance.getNeighbors(next)){
+                if(closedList.containsKey(neighbor)
+                        // or if route to city is claimed by another player
+                        || (routesInstance.isRouteClaimed(routesInstance.getRoutes(next, neighbor).get(0)) && !routesInstance.hasCompletedRoute(self, next, neighbor)))
+                    continue;
+
+				/* get route between next and neighbor and see if better than neighbor's value */
+                ArrayList<Route> routesToNeighbor = routesInstance.getRoutes(next, neighbor);
+                for(Route routeToNeighbor : routesToNeighbor){
+                    int newCost = closedList.get(next) + routeToNeighbor.getCost();
+
+                    if(openList.containsKey(neighbor)){
+                        if(newCost < openList.get(neighbor)){
+                            openList.put(neighbor, newCost);
+                            parents.put(neighbor, next);
+                        }
+                    }
+                    else{
+                        openList.put(neighbor, newCost);
+                        parents.put(neighbor, next);
+                    }
+                }
+            }
+        }
+
+        return path;
+    }
+}

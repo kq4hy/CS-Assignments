@@ -1,0 +1,469 @@
+// Jenna Lee (jnl9nb)
+// Late days used: 1
+
+package ttr.model.player;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+public class jnl9nbPlayer extends Player{
+	private Routes route;
+	private ArrayList<Route> chokePoints; // Common choke points of the game
+	private ArrayList<Route> allRoutes; // All routes in the map
+	private ArrayList<Destination> destinations; // All destinations in the map
+	
+	public jnl9nbPlayer(String name) {
+		super(name);
+		route = Routes.getInstance();
+		allRoutes = route.getAllRoutes(); // Set allRoutes
+		chokePoints = this.getChokePoints(); // Set chokePoints
+		destinations = this.getDestinations(); // Set destinations
+	}
+	
+	public jnl9nbPlayer() {
+		super("JNL9NB Player");
+		route = Routes.getInstance();
+		allRoutes = route.getAllRoutes(); // Set allRoutes
+		chokePoints = this.getChokePoints(); // Set chokePoints
+		destinations = this.getDestinations(); // Set destinations
+	}
+	
+	@Override
+	public void makeMove() {			
+		ArrayList<DestinationTicket> dests = super.getDestinationTickets(); // Get destination tickets
+		DestinationTicket current;
+		if (dests.size() != 0) { // If there are destination tickets
+			current = this.getDestTicketCostliest(); // Set the current ticket to be the one worth the most points
+			HashMap<Destination, Destination> shortestRoute = this.getShortestRoute(current.getFrom(), current.getTo()); // Find the shortest route
+			ArrayList<Route> currentPath = buildPath(shortestRoute, current.getTo()); // Build the shortest path
+			// If the AI only has one destination ticket and all current tickets are complete-able, draw more to work on
+			if (dests.size() == 1 && (super.getNumTrainPieces() >= this.pathCostLeft(currentPath))) {
+				super.drawDestinationTickets();
+			}
+			// Else if there are fewer train pieces left than the cost of the current path and another ticket can be completed
+			else if ((super.getNumTrainPieces() <= this.pathCostLeft(currentPath)) && this.ticketCanBeCompleted()) {
+				current = this.getDestTicketCostliestPossible(); // Set the current ticket
+				shortestRoute = this.getShortestRoute(current.getFrom(), current.getTo()); // Find the shortest route
+				currentPath = buildPath(shortestRoute, current.getTo()); // Build this path
+				this.workOnCurrentPath(currentPath); // Work on completing this path
+			}
+			// Else if the costliest ticket can be completed and there are enough train pieces left
+			else if (this.ticketCanBeCompleted()) {
+				this.workOnCurrentPath(currentPath); // Work on the costliest path
+			}
+			// Else if none of your destination tickets can be completed
+			else if (!this.ticketCanBeCompleted()) {
+				this.workOnRoute(this.costliestCompletableRoute()); // Work on the costliest complete-able route on the map
+			}
+			// Else draw a train card
+			else {
+				super.drawTrainCard(0);
+			}
+		}
+		// Else if none of the destination tickets can be completed
+		else if (!this.ticketCanBeCompleted()) {
+			this.workOnRoute(this.costliestCompletableRoute()); // Work on the costliest complete-able route on the map
+		}
+		// Else draw a train card
+		else {
+			super.drawTrainCard(0);
+		}
+	}
+	
+	// Hard-code the choke points of the game into a list
+	public ArrayList<Route> getChokePoints() {
+		ArrayList<Route> chokePoints = new ArrayList<Route>();
+		for (Route r: allRoutes) {
+			if ((r.getDest1().equals(Destination.LosAngeles) && r.getDest2().equals(Destination.Phoenix)) ||
+					(r.getDest2().equals(Destination.LosAngeles) && r.getDest1().equals(Destination.Phoenix))) {
+				chokePoints.add(r);
+			}
+			else if ((r.getDest1().equals(Destination.Nashville) && r.getDest2().equals(Destination.Atlanta)) ||
+					(r.getDest2().equals(Destination.Nashville) && r.getDest1().equals(Destination.Atlanta))) {
+				chokePoints.add(r);
+			}
+			else if ((r.getDest1().equals(Destination.Houston) && r.getDest2().equals(Destination.NewOrleans)) ||
+					(r.getDest2().equals(Destination.Houston) && r.getDest1().equals(Destination.NewOrleans))) {
+				chokePoints.add(r);
+			}
+			else if ((r.getDest1().equals(Destination.Seattle) && r.getDest2().equals(Destination.Portland)) ||
+					(r.getDest2().equals(Destination.Seattle) && r.getDest1().equals(Destination.Portland))) {
+				chokePoints.add(r);
+			}
+			else if ((r.getDest1().equals(Destination.Dallas) && r.getDest2().equals(Destination.Houston)) ||
+					(r.getDest2().equals(Destination.Dallas) && r.getDest1().equals(Destination.Houston))) {
+				chokePoints.add(r);
+			}
+		}
+		
+		return chokePoints;
+	}
+
+	// Get a list of all of the destinations on the map
+	public ArrayList<Destination> getDestinations() {
+		ArrayList<Destination> dests = new ArrayList<Destination>();
+		for (Route r: allRoutes) {
+			if (!dests.contains(r.getDest1())) {
+				dests.add(r.getDest1());
+			}
+			if (!dests.contains(r.getDest2())) {
+				dests.add(r.getDest2());
+			}
+		}
+		return dests;
+	}
+	
+	// Get a list of all routes of neighboring cities that are unclaimed
+	public ArrayList<Route> unclaimedRoutes() {
+		ArrayList<Route> routes = new ArrayList<Route>();
+		for (Route r: allRoutes) {
+			if (!isClaimed(r)) {
+				routes.add(r);
+			}
+		}
+		return routes;
+	}
+	
+	// Get the route with the largest cost where the cost is less than the number of train pieces
+	public Route costliestPossibleRoute() {
+		Route costliest = this.shortestCost();
+		for (Route r: this.unclaimedRoutes()) {
+			if ((r.getCost() >= costliest.getCost()) && (r.getCost() <= super.getNumTrainPieces())) {
+				costliest = r;
+			}
+		}
+		return costliest;
+	}
+	
+	// Get the route with the largest cost where the cost is less than the number of train pieces and
+	// it can be completed with your hand
+	public Route costliestCompletableRoute() {
+		Route costliest = this.shortestCost();
+		for (Route r: this.unclaimedRoutes()) {
+			if ((r.getCost() >= costliest.getCost()) && (r.getCost() <= super.getNumTrainPieces()) &&
+					(this.getNumTrainCardsByColor(r.getColor()) + this.getNumTrainCardsByColor(TrainCardColor.rainbow) >= r.getCost())) {
+				costliest = r;
+			}
+		}
+		return costliest;
+	}
+	
+	// Get the route between two destinations (only used for neighboring cities)
+	public Route getRoute(Destination from, Destination to) {
+		for (Route r: allRoutes) {
+			if ((r.getDest1().equals(from) && r.getDest2().equals(to)) ||
+					(r.getDest1().equals(to) && r.getDest2().equals(from))) {
+				return r;
+			}
+		}
+		return null;
+	}
+	
+	// Work on completing the given path
+	public void workOnCurrentPath(ArrayList<Route> currentPath) {
+		Route longest = this.shortestCost(); // Set the longest route between neighboring cities to be one of shortestCost initially
+		// If the path has unclaimed an unclaimed chokePoint
+		if (unfinishedChokePoint(currentPath).size() > 0) {
+			// Work on it
+			workOnRoute(unfinishedChokePoint(currentPath).get(0));
+		}
+		// Else find the longest route between neighboring cities and work on completing it
+		else {
+			for (Route r: currentPath) {
+				if ((r.getCost() >= longest.getCost()) && (!isClaimed(r))) {
+					longest = r;
+				}
+			}
+			workOnRoute(longest);
+		}
+	}
+	
+	// Return a route with cost 1
+	public Route shortestCost() {
+		for (Route r: allRoutes) {
+			if (r.getCost() == 1) {
+				return r;
+			}
+		}
+		return null;
+	}
+	
+	// Work on completing a route between two neighboring cities
+	public void workOnRoute(Route route) {
+		TrainCardColor color = route.getColor(); // Set the color of the route
+		int cost = route.getCost(); // Set the cost of the route
+		// If the color is rainbow, the route is grey
+		if (color.equals(TrainCardColor.rainbow)) {
+			workOnGreyRoute(route); // Use separate method to work on grey routes
+		}
+		else {
+			// If you have enough of the appropriately-colored cards in your hand
+			if (this.getNumTrainCardsByColor(color) >= cost) {
+				super.claimRoute(route, color); // Claim the route
+			}
+			// Else if you have enough cards to claim the route
+			else if (this.getNumTrainCardsByColor(color) + this.getNumTrainCardsByColor(TrainCardColor.rainbow) >= cost) {
+				super.claimRoute(route, color); // Claim the route
+			}
+			// Else draw a train card of the appropriate color
+			else {
+				this.drawTrainColor(color);
+			}
+		}
+	}
+	
+	// Work on completing a grey route between two neighboring cities
+	public void workOnGreyRoute(Route route) {
+		HashMap<TrainCardColor, Integer> byColor = numColors(); // Find the number of each TrainCardColor in your hand
+		int cost = route.getCost(); // Find the cost of the route
+		TrainCardColor most = validColor(); 
+		// For each color in your hand
+		for (TrainCardColor tcColor: byColor.keySet()) {
+			// If you have enough of the color to cover the cost
+			if (byColor.get(tcColor) >= cost) {
+				super.claimRoute(route, tcColor); // Claim the route using this color
+			}
+			// If you have more of the current color than the currently stored "most"
+			if (byColor.get(tcColor) > byColor.get(most)) {
+				most = tcColor; // Update most
+			}
+		}
+		this.drawTrainColor(most); // If you could not claim the route, try to draw a card with the color you ahve most of
+	}
+	
+	// Returns a color that you have in your hand
+	public TrainCardColor validColor() {
+		HashMap<TrainCardColor, Integer> byColor = numColors();
+		for (TrainCardColor tc: byColor.keySet()) {
+			return tc;
+		}
+		return null;
+	}
+	
+	// Returns the number of the given color in your hand
+	public int getNumTrainCardsByColor(TrainCardColor color){
+		int count = 0;
+		for(TrainCard card : super.getHand()){
+			if(card.getColor() == color) count++;
+		}
+		return count;
+	}
+	
+	// Returns a HashMap that maps TrainCardColors to the number of cards of that color in your hand
+	public HashMap<TrainCardColor, Integer> numColors() {
+		HashMap<TrainCardColor, Integer> byColor = new HashMap<TrainCardColor, Integer>();
+		TrainCardColor curColor;
+		for (TrainCard tc: super.getHand()) {
+			curColor = tc.getColor();
+			if (byColor.containsKey(curColor)) {
+				byColor.put(curColor, byColor.get(curColor) + 1);
+			}
+			else {
+				byColor.put(curColor, 1);
+			}
+		}
+		return byColor;
+	}
+	
+	// Returns a list of the unclaimed chokePoints in the given path
+	public ArrayList<Route> unfinishedChokePoint(ArrayList<Route> currentPath) {
+		ArrayList<Route> result = new ArrayList<Route>();
+		for (Route r: this.chokePoints) {
+			if (currentPath.contains(r) && (!isClaimed(r))) {
+				result.add(r);
+			}
+		}
+		return result;
+	}
+	
+	// Returns the destination ticket that has the highest point value
+	public DestinationTicket getDestTicketCostliest() {
+		DestinationTicket res = super.getDestinationTickets().get(0);
+		for (DestinationTicket d: super.getDestinationTickets()) {
+			if (d.getValue() > res.getValue()) {
+				res = d;
+			}
+		}
+		return res;
+	}
+	
+	// Returns the destination ticket that has the highest point value while having a shortest path that can be
+	// completed given the number of train pieces
+	public DestinationTicket getDestTicketCostliestPossible() {
+		DestinationTicket res = null;
+		for (DestinationTicket dt: super.getDestinationTickets()) {
+			if (this.destinationTicketCost(dt) <= super.getNumTrainPieces()) {
+				res = dt;
+			}
+		}
+		for (DestinationTicket d: super.getDestinationTickets()) {
+			if ((d.getValue() > res.getValue()) && (this.destinationTicketCost(d) <= super.getNumTrainPieces())) {
+				res = d;
+			}
+		}
+		return res;
+	}
+	
+	// Returns whether any destination ticket can be completed
+	public boolean ticketCanBeCompleted() {
+		boolean res = false;
+		// If there are no destination tickets
+		if (super.getDestinationTickets().size() == 0) {
+			return res; // Return false
+		}
+		for (DestinationTicket d: super.getDestinationTickets()) {
+			if (this.destinationTicketCost(d) <= super.getNumTrainPieces()) {
+				res = true;
+			}
+		}
+		return res;
+	}
+	
+	// Dijkstras shortest path used to find the shortest path between two cities
+	// returns the "comes-from" mapping of cities
+	public HashMap<Destination, Destination> getShortestRoute(Destination from, Destination to) {
+		HashMap<Destination, Integer> distance = new HashMap<Destination, Integer>();
+		HashMap<Destination, Destination> previous = new HashMap<Destination, Destination>(); // Used to build the path afterwards
+		ArrayList<Destination> Q = new ArrayList<Destination>(); // Open list
+		Destination u;
+		// Initialize: largest distances possible, null previous destinations, and all destinations added to Q
+		for (Destination d: destinations) {
+			distance.put(d, Integer.MAX_VALUE);
+			previous.put(d, null);
+			Q.add(d);
+		}
+		distance.put(from, 0); // Set the distance of starting city to be 0
+		// While Q is not empty
+		while (Q.size() > 0) {
+			u = minDist(distance, Q); // Set Destination u to be the minimum distance
+			Q.remove(u); // Remove u from Q
+			// For each of u's neighbors
+			for (Destination v: route.getNeighbors(u)) {
+				ArrayList<Route> routesToNeighbor = route.getRoutes(u, v); // Find all routes to neighbor
+				// For each route (there will only be multiple if double-route)
+				for(Route routeToNeighbor : routesToNeighbor){
+					int newCost = distance.get(u) + routeToNeighbor.getCost(); // Calculate possible new cost
+					// If Q contains v and v is not claimed by opponent
+					if(Q.contains(v) && (!this.isClaimed(getRoute(v, u)) || this.isClaimedByMe(v, u))) {	
+						if(newCost < distance.get(v)){ // If newCost is shorter than the stored cost
+							distance.put(v, newCost); // Update distance
+							previous.put(v, u); // Update previous
+						}
+					}
+					// Else if it is not claimed by opponent
+					else if (!this.isClaimed(getRoute(v,u)) || this.isClaimedByMe(v, u)) {
+						distance.put(v, newCost); // Update distance
+					}
+				}
+			}
+		}
+		return previous; // Return previous in order to build path
+	}
+	
+	// Build path found in getShortestRoute()
+	public ArrayList<Route> buildPath(HashMap<Destination, Destination> previous, Destination to) {
+		ArrayList<Destination> pathReverse = new ArrayList<Destination>(); // Reversed path in destinations
+		ArrayList<Destination> path = new ArrayList<Destination>(); // Path in destinations
+		ArrayList<Route> pathRoute = new ArrayList<Route>(); // Path in routes of neighboring cities
+		Route r;
+		pathReverse.add(to); // Add the second destination
+		Destination current = to;
+		// While something leads to the current destination
+		while (previous.containsKey(current)) {
+			current = previous.get(current); // Update current to be the node it comes from
+			pathReverse.add(current); // Add current
+		}
+		// Reverse the reverse path to get the actual path
+		for (int i = pathReverse.size()-2; i >=0; i--) {
+			path.add(pathReverse.get(i));
+		}
+		// Convert it to Route objects
+		for (int j = 0; j < path.size() -1; j++) {
+			r = this.getRoute(path.get(j), path.get(j+1));
+			pathRoute.add(r);
+		}
+		return pathRoute; // Return the Route version of the path
+	}
+	
+	// Determine whether the given route is claimed by me
+	public boolean isClaimedByMe (Destination from, Destination to) {
+		boolean res = false;
+		Route check = this.getRoute(from, to);
+		ArrayList<Route> routes = route.getRoutes(check.getDest1(), check.getDest2());
+		for (Route rou: routes) {
+			for (Route r: super.getPlayerClaimedRoutes()) {
+				if (rou.equals(r)) {
+					res = true;
+				}
+			}
+		}
+		return res;
+	}
+	
+	// Returns the destination in Q that has the smallest distance
+	public Destination minDist(HashMap<Destination, Integer> distance, ArrayList<Destination> Q) {
+		Destination smallest = Q.get(0);
+		for (Destination d: Q) {
+			if (distance.get(d) < distance.get(smallest)) {
+				smallest = d;
+			}
+		}
+		return smallest;
+	}
+	
+	// Draw a train card of the given color
+	public void drawTrainColor(TrainCardColor color) {
+		ArrayList<TrainCard> faceUp = super.getFaceUpCards(); // Get the faceUp cards
+		// If there is a rainbow card, pick it
+		for (int i = 0; i < 5; i++) {
+			if (faceUp.get(i).getColor().equals(TrainCardColor.rainbow)) {
+				super.drawTrainCard(i+1);
+			}
+		}
+		// If there is not a rainbow card, try to pick up a card with the desired color
+		for (int i = 0; i < 5; i++) {
+			if (faceUp.get(i).getColor().equals(color)) {
+				super.drawTrainCard(i+1);
+			}
+		}
+		// Else draw from the deck
+		super.drawTrainCard(0);
+	}
+
+	// Return the cost of the path
+	public int pathCost(ArrayList<Route> path) {
+		int res = 0;
+		for (Route r: path) {
+			res += r.getCost();
+		}
+		return res;
+	}
+	
+	// Return the cost of the unclaimed segments of the path
+	public int pathCostLeft(ArrayList<Route> path) {
+		int res = 0;
+		for (Route r: path) {
+			if (!isClaimed(r)) {
+				res += r.getCost();	
+			}
+		}
+		return res;
+	}
+	
+	// Return the cost of the given DestinationTiket
+	public int destinationTicketCost(DestinationTicket d) {
+		return this.pathCost(buildPath(getShortestRoute(d.getFrom(), d.getTo()), d.getTo()));
+	}
+	
+	// Return whether the given Route is claimed
+	public boolean isClaimed(Route r) {
+		return route.isRouteClaimed(r);
+	}
+}

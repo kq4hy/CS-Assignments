@@ -1,0 +1,287 @@
+package ttr.model.player;
+
+import java.util.ArrayList;
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+public class MikePark_AI_Heuristic extends Player {
+
+	public MikePark_AI_Heuristic(String name) {
+		super("Mike Park");
+		// TODO Auto-generated constructor stub
+	}
+	
+	/**
+	 * Constants
+	 */
+	int turnCnt = 0;
+
+	/**
+	 * ArrayList for destination ticket routes and important routes
+	 */
+	ArrayList<Route> vitalRoutes = new ArrayList<Route>();
+	
+	
+	/**
+	 * Important routes to get as early as possible
+	 */
+	ArrayList<Route> r1 = Routes.getInstance().getRoutes(Destination.LosAngeles,Destination.Phoenix);
+	ArrayList<Route> r2 = Routes.getInstance().getRoutes(Destination.Nashville, Destination.Atlanta);
+	ArrayList<Route> r3 = Routes.getInstance().getRoutes(Destination.Houston, Destination.NewOrleans);
+	ArrayList<Route> r4 = Routes.getInstance().getRoutes(Destination.Seattle, Destination.Portland);
+	ArrayList<Route> r5 = Routes.getInstance().getRoutes(Destination.Dallas, Destination.Houston);
+	ArrayList<Route> r6 = Routes.getInstance().getRoutes(Destination.Montreal, Destination.NewYork);
+	ArrayList<Route> r7 = Routes.getInstance().getRoutes(Destination.Nashville, Destination.Pittsburgh);
+	ArrayList<Route> r8 = Routes.getInstance().getRoutes(Destination.Toronto, Destination.Pittsburgh);
+	
+	public class Node {
+
+		Destination currDest;
+		Node parent = null;
+		int cost = 0;
+		
+		public Node(){
+			Destination currDest;
+			Node parent = null;
+			int cost = 0;
+		}
+		
+		public Node(Destination d){
+			this.currDest = d;
+			this.parent = null;
+			this.cost = 0;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result + cost;
+			result = prime * result + ((currDest == null) ? 0 : currDest.hashCode());
+			result = prime * result + ((parent == null) ? 0 : parent.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (getClass() != obj.getClass())
+				return false;
+			Node other = (Node) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (cost != other.cost)
+				return false;
+			if (currDest != other.currDest)
+				return false;
+			return true;
+		}
+
+		private MikePark_AI_Heuristic getOuterType() {
+			return MikePark_AI_Heuristic.this;
+		}
+
+
+	
+
+	}
+		
+	public Node shortestPath(Destination from, Destination to){
+		/* If same, just return false */
+		if(from == to) return null;
+		
+		/* Open and Closed lists (breadth first search) */
+		ArrayList<Node> openList = new ArrayList<Node>();
+		ArrayList<Node> closedList = new ArrayList<Node>();
+		
+		Node nodeFrom = new Node(from);
+		Node nodeTo = new Node(to);
+		
+		openList.add(nodeFrom);
+		
+		while(openList.size() > 0){
+			
+			/* Pop something off the open list, if destination then return true */
+			Node n = new Node();
+			n.cost = 9999;
+			for(Node tempNode : openList){
+				if(tempNode.cost < n.cost){
+					n.currDest = tempNode.currDest;
+					n.cost = tempNode.cost;
+					if(tempNode.parent != null){
+						n.parent = tempNode.parent;
+					}
+				}
+			
+			}
+			
+			/* Take it off the open list and put on the closed list */
+			openList.remove(n);
+			closedList.add(n);
+			
+			/* If this is the destination, then return!!!! */
+			if(n.currDest == nodeTo.currDest) return n;
+			
+			/* Get all the neighbors of the next city that aren't on open or closed lists already */
+			for(Destination neighbor : Routes.getInstance().getNeighbors(n.currDest)){
+				Node neighborNode = new Node(neighbor);
+				neighborNode.parent = n;
+				if(closedList.contains(neighborNode)) continue;
+				
+				/* get route between next and neighbor and see if better than neighbor's value */
+				ArrayList<Route> routesToNeighbor = Routes.getInstance().getRoutes(n.currDest, neighborNode.currDest);
+				for(Route routeToNeighbor : routesToNeighbor){
+					int newCost = closedList.get(closedList.indexOf(n)).cost + routeToNeighbor.getCost();
+					
+					if(openList.contains(neighborNode)){	
+						if(newCost < openList.get(openList.indexOf(neighborNode)).cost){
+							openList.get(openList.indexOf(neighborNode)).cost = newCost;
+						}
+					}
+					else{
+						neighborNode.cost = newCost; 
+						openList.add(neighborNode);
+					}
+				}
+			}
+		}
+		
+		return nodeFrom;
+	}
+	
+	@Override
+	public void makeMove() {
+
+		/**
+		 * Get all the planned routes 
+		 */
+		if (turnCnt == 0){
+			/**
+			 * Add important routes to arrayList
+			 */
+			vitalRoutes.addAll(r1);
+			vitalRoutes.addAll(r2);
+			vitalRoutes.addAll(r3);
+			vitalRoutes.addAll(r4);
+			vitalRoutes.addAll(r5);
+			vitalRoutes.addAll(r6);
+			vitalRoutes.addAll(r7);
+			vitalRoutes.addAll(r8);
+			
+			/**
+			 * Add routes from that destination ticket to arrayList
+			 */
+			Node current = new Node();
+			current = shortestPath(super.getDestinationTickets().get(0).getFrom(),super.getDestinationTickets().get(0).getTo());
+			while(current.parent != null){
+				System.out.println(current.currDest + " ---> " + current.parent.currDest);
+				ArrayList<Route> routeTemp = Routes.getInstance().getRoutes(current.currDest, current.parent.currDest);
+				vitalRoutes.addAll(routeTemp);
+				current = current.parent;
+			}
+			
+			current = shortestPath(super.getDestinationTickets().get(1).getFrom(),super.getDestinationTickets().get(1).getTo());
+			while(current.parent != null){
+				System.out.println(current.currDest + " ---> " + current.parent.currDest);
+				ArrayList<Route> routeTemp = Routes.getInstance().getRoutes(current.currDest, current.parent.currDest);
+				vitalRoutes.addAll(routeTemp);
+				current = current.parent;
+			}
+			
+		}
+		
+		/**
+		 * First 10 turns draw a train card
+		 */
+		if(turnCnt < 10){
+			int index = 0;
+			for( TrainCard t : super.getFaceUpCards()){
+				if (t.getColor() == TrainCardColor.rainbow){
+					index = super.getFaceUpCards().indexOf(t);
+					break;
+				}
+			}
+			super.drawTrainCard(index);
+		}
+		
+		
+		
+		if(turnCnt% 6 == 0){		
+			
+			for(Route r : vitalRoutes){
+				if(Routes.getInstance().isRouteClaimed(r)){
+					vitalRoutes.remove(r);
+					vitalRoutes.trimToSize();
+					break;
+				}
+				if(super.getNumTrainCardsByColor(r.getColor()) == r.getCost()){
+					super.claimRoute(r, r.getColor());
+					vitalRoutes.remove(r);
+					vitalRoutes.trimToSize();
+					break;
+				}
+			}
+			
+			for(Route r2 : Routes.getInstance().getAllRoutes()){
+				if(r2.getCost() >= 3){
+					if(r2.getColor() == TrainCardColor.rainbow){
+						if(super.getNumTrainCardsByColor(r2.getColor()) < r2.getCost()){
+							if(super.getNumTrainCardsByColor(TrainCardColor.blue) == r2.getCost()){
+								super.claimRoute(r2, TrainCardColor.blue);
+							}
+							if(super.getNumTrainCardsByColor(TrainCardColor.black) == r2.getCost()){
+								super.claimRoute(r2, TrainCardColor.black);
+							}
+							if(super.getNumTrainCardsByColor(TrainCardColor.green) == r2.getCost()){
+								super.claimRoute(r2, TrainCardColor.green);
+							}
+							if(super.getNumTrainCardsByColor(TrainCardColor.orange) == r2.getCost()){
+								super.claimRoute(r2, TrainCardColor.orange);
+							}
+							if(super.getNumTrainCardsByColor(TrainCardColor.purple) == r2.getCost()){
+								super.claimRoute(r2, TrainCardColor.purple);
+							}
+							if(super.getNumTrainCardsByColor(TrainCardColor.red) == r2.getCost()){
+								super.claimRoute(r2, TrainCardColor.red);
+							}
+							if(super.getNumTrainCardsByColor(TrainCardColor.white) == r2.getCost()){
+								super.claimRoute(r2, TrainCardColor.white);
+							}
+							if(super.getNumTrainCardsByColor(TrainCardColor.yellow) == r2.getCost()){
+								super.claimRoute(r2, TrainCardColor.yellow);
+							}	
+						}
+					}
+					if(super.getNumTrainCardsByColor(r2.getColor()) == r2.getCost() && (!Routes.getInstance().isRouteClaimed(r2))){
+						super.claimRoute(r2, r2.getColor());
+						break;
+					}
+				}
+			}
+			
+			for(Route r2 : Routes.getInstance().getAllRoutes()){
+				if(super.getNumTrainCardsByColor(r2.getColor()) == r2.getCost() && (!Routes.getInstance().isRouteClaimed(r2))){
+					super.claimRoute(r2, r2.getColor());
+					break;
+				}
+			}
+		}
+		
+		else{
+			super.drawTrainCard(0);
+		}
+		
+		turnCnt++;
+		
+	}
+		
+		
+}
+
