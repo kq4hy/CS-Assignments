@@ -57,10 +57,10 @@ public class RouteSelectionPanel extends Sprite implements ActionListener{
 		super.onAddedToStage(parent);
 		
 		/* Add it all to this sprite */
-		this.addComponent(from, this.getX() + 0, this.getY() + 0, 200, 30);
-		this.addComponent(to, (int)(this.getX() + from.getBounds().getWidth() + 20), this.getY() + 0, 200, 30);
-		this.addComponent(confirmButton, (int)(this.getX() + ((from.getBounds().getWidth() + to.getBounds().getWidth() + 10) / 2)-75), (int)(this.getY() + from.getBounds().getHeight() + 20), 150, 50);
-		this.addComponent(colors, confirmButton.getX() + confirmButton.getWidth() + 10, confirmButton.getY(), 200, 30);
+		this.addComponent(from, this.getX() +0, this.getY() - 250, 200, 30);
+		this.addComponent(to, (int)(this.getX() + from.getBounds().getWidth() + 20), this.getY() - 300, 200, 30);
+		this.addComponent(confirmButton, (int)(this.getX() + ((from.getBounds().getWidth() + to.getBounds().getWidth() + 10) / 2)-75), (int)(this.getY() -250+ from.getBounds().getHeight() + 20), 150, 50);
+		this.addComponent(colors, confirmButton.getX() + confirmButton.getWidth() + 10, confirmButton.getY() - 250, 200, 30);
 	}
 	
 	@Override
