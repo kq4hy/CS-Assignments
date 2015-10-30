@@ -68,7 +68,7 @@ public class Skylar extends Player {
 			if (owner != null) {
 				if (owner.getName() != "Skylar") {
 					//go into CitiesMaps, find cities associated with r.getDest1 and r.getDest2
-					//go into their adjacencies and set the Path object’s cost to 999.
+					//go into their adjacencies and set the Path objectï¿½s cost to 999.
 					c1.findPath(r.getDest2()).weight = 999;
 					c2.findPath(r.getDest1()).weight = 999;
 				}
@@ -218,6 +218,30 @@ public class Skylar extends Player {
 	    return routes;
 	}
 	
+	//Takes in two Destinations and calculates the shortest path from start to dest
+	//Doesn't work while tested in this main b/c Routes.getInstance() doesn't work in this main,
+	//   but should work when run in TTRMain (not tested but test it for me!)
+	public List<Route> getShortestPath(Destination start, Destination dest) {
+		//this.CitiesMap.clear(); 
+		//this.initiateGraph();
+		this.update_graph();
+		this.computePaths(this.CitiesMap.get(start), this.CitiesMap);
+		
+		List<Route> routes = new ArrayList<Route>();
+
+		Route temp;
+	    for (City vertex = this.CitiesMap.get(dest); vertex != null; vertex = vertex.previous) {
+	    	if (vertex.previous != null) {
+	    		Path p = vertex.findPath(vertex.previous.name);
+	    		temp = new Route(vertex.previous.name, vertex.name, p.weight, p.color);
+	    		routes.add(temp); 
+	    	}
+	    }
+	    Collections.reverse(routes);
+	    return routes;
+		
+	}
+	
 	static class State {
 		public final String name;
 		public int reward = 0;
@@ -259,6 +283,7 @@ public class Skylar extends Player {
 		    List<Route> routes = getShortestPathTo(v);
 		    System.out.println("Path: " + routes);
 		}
+		//testSkylar.getShortestPath(Destination.LosAngeles, Destination.Chicago);
 		
 	}
 }
