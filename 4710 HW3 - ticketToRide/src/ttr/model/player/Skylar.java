@@ -11,13 +11,20 @@ import ttr.model.trainCards.*;
 
 public class Skylar extends Player {
 	
-	public Routes routesList = new Routes();
+	public State buy_able = new State("Buy_able");
+	public State unbuy_able = new State("Unbuy_able");
+	public State curr_state;
+	public Routes routesList = Routes.getInstance();
 	public ArrayList<Route> allRoutes = routesList.getAllRoutes();
+	public HashMap<Route, Integer> routes_to_claim = new HashMap<Route, Integer>();
 	//public ArrayList<City> Cities = new ArrayList<City>();
 	public HashMap<Destination,City> CitiesMap = new HashMap<Destination,City>();
 	
 	public Skylar(String name) {
 		super(name);
+		initiate_actions(buy_able, unbuy_able);
+		initiateGraph();
+		curr_state = unbuy_able;
 	}
 	
 	public Skylar() {
@@ -26,8 +33,45 @@ public class Skylar extends Player {
 
 	@Override
 	public void makeMove() {
-		// TODO Auto-generated method stub
-
+		routesList = Routes.getInstance();
+		allRoutes = routesList.getAllRoutes();
+		update_graph();
+		for(DestinationTicket ticket: this.getDestinationTickets()) {
+			computePaths(CitiesMap.get(ticket.getFrom()), this.CitiesMap);
+			List<Route> list_routes = getShortestPathTo(CitiesMap.get(ticket.getTo()));
+			for(Route r: list_routes){
+				if(routes_to_claim.get(r) == null)
+					routes_to_claim.put(r, 0);
+				routes_to_claim.put(r, routes_to_claim.get(r) + r.getPoints());
+			}
+		}
+	}
+	
+	public void initiate_actions(State buy, State cant_buy) {
+		buy.add_action(new Action("a1", buy, buy));
+		buy.add_action(new Action("a2", buy, cant_buy));
+		cant_buy.add_action(new Action("a3", cant_buy, buy));
+		cant_buy.add_action(new Action("a4", cant_buy, cant_buy));
+		cant_buy.add_action(new Action("a5", cant_buy, cant_buy));
+	}
+	
+	public void update_graph() {
+		for (int i = 0; i < this.allRoutes.size(); i++) {
+			Route r = this.allRoutes.get(i);
+			Player owner = r.getOwner(); // null if unclaimed
+			City c1 = CitiesMap.get(r.getDest1());
+			City c2 = CitiesMap.get(r.getDest2());
+			if (owner.getName() != "Skylar") {
+				//go into CitiesMaps, find cities associated with r.getDest1 and r.getDest2
+				//go into their adjacencies and set the Path object’s cost to 999.
+				c1.findPath(r.getDest2()).weight = 999;
+				c2.findPath(r.getDest1()).weight = 999;
+			}
+			else if (owner.getName() == "Skylar") {
+				c1.findPath(r.getDest2()).weight = 0;
+				c2.findPath(r.getDest1()).weight = 0;
+			}
+		}
 	}
 	
 	public void initiateGraph() {
@@ -74,15 +118,20 @@ public class Skylar extends Player {
 	    public ArrayList<Path> adjacencies = new ArrayList<Path>();
 	    public int minDistance = 999;
 	    public City previous;
+	    
 	    public City(Destination argName) { name = argName; }
+	    
 	    public String toString() { return name.toString(); }
+	    
 	    public int compareTo(City other)
 	    {
 	        return Integer.compare(minDistance, other.minDistance);
 	    }
+	    
 	    public boolean equals(City other) {
 	    	return this.name == other.name;
 	    }
+	    
 	    public void exfoliate() {
 	    	System.out.print(this.name + ": ");
 	    	for (Path p: adjacencies) {
@@ -90,6 +139,7 @@ public class Skylar extends Player {
 	    	}
 	    	System.out.println("");
 	    }
+	    
 	    public boolean containsPath(Path p) {
 	    	for (Path pat: this.adjacencies) {
 	    		if (pat.target.name == p.target.name) {
@@ -97,6 +147,7 @@ public class Skylar extends Player {
 	    		}
 	    	} return false;
 	    }
+	    
 	    public Path findPath(Destination n) {
 	    	for (Path c: this.adjacencies) {
 	    		if (c.target.name == n) {
@@ -110,7 +161,7 @@ public class Skylar extends Player {
 	static class Path
 	{
 	    public final City target;
-	    public final int weight;
+	    public int weight;
 	    public final TrainCardColor color;
 	    
 	    public Path(City argTarget, int argWeight, TrainCardColor argColor) { 
@@ -145,16 +196,6 @@ public class Skylar extends Player {
 	    }
 	}
 	
-//	public static List<City> getShortestPathTo(City target)
-//	{
-//	    List<City> path = new ArrayList<City>();
-//	    for (City vertex = target; vertex != null; vertex = vertex.previous)
-//	        path.add(vertex);
-//
-//	    Collections.reverse(path);
-//	    return path;
-//	}
-	
 	public static List<Route> getShortestPathTo(City target) {
 		List<Route> routes = new ArrayList<Route>();
 
@@ -173,21 +214,28 @@ public class Skylar extends Player {
 	static class State {
 		public final String name;
 		public int reward = 0;
-		public ArrayList<Edge> actions = new ArrayList<Edge>();
+		public ArrayList<Action> actions = new ArrayList<Action>();
 		public State(String n) {
 			name = n;
+		}
+		public void add_action(Action a) {
+			actions.add(a);
 		}
 		
 	}
 	
-	static class Edge {
+	static class Action {
 		public String name;
 		public int reward;
 		public double chance;
 		public State currState;
 		public State nextState;
-		public Edge() {
-			
+		public Action(String name_,State curr_state, State next_state) {
+			name = name_;
+			reward = 0;
+			chance = 0;
+			currState = curr_state;
+			nextState = next_state;
 		}
 	}
 	
