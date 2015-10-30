@@ -36,15 +36,19 @@ public class Skylar extends Player {
 		routesList = Routes.getInstance();
 		allRoutes = routesList.getAllRoutes();
 		update_graph();
-		for(DestinationTicket ticket: this.getDestinationTickets()) {
+		ArrayList<DestinationTicket> curr_destinations = this.getDestinationTickets();
+		for(DestinationTicket ticket: curr_destinations) {
 			computePaths(CitiesMap.get(ticket.getFrom()), this.CitiesMap);
+			System.out.println("Distance from " + CitiesMap.get(ticket.getFrom()) + " to " + CitiesMap.get(ticket.getTo()) + ": " + CitiesMap.get(ticket.getTo()).minDistance);
 			List<Route> list_routes = getShortestPathTo(CitiesMap.get(ticket.getTo()));
+		    System.out.println("Path: " + list_routes);
 			for(Route r: list_routes){
 				if(routes_to_claim.get(r) == null)
 					routes_to_claim.put(r, 0);
 				routes_to_claim.put(r, routes_to_claim.get(r) + r.getPoints());
 			}
 		}
+		super.drawTrainCard(0);
 	}
 	
 	public void initiate_actions(State buy, State cant_buy) {
@@ -61,15 +65,18 @@ public class Skylar extends Player {
 			Player owner = r.getOwner(); // null if unclaimed
 			City c1 = CitiesMap.get(r.getDest1());
 			City c2 = CitiesMap.get(r.getDest2());
-			if (owner.getName() != "Skylar") {
-				//go into CitiesMaps, find cities associated with r.getDest1 and r.getDest2
-				//go into their adjacencies and set the Path object’s cost to 999.
-				c1.findPath(r.getDest2()).weight = 999;
-				c2.findPath(r.getDest1()).weight = 999;
-			}
-			else if (owner.getName() == "Skylar") {
-				c1.findPath(r.getDest2()).weight = 0;
-				c2.findPath(r.getDest1()).weight = 0;
+			if (owner != null) {
+				if (owner.getName() != "Skylar") {
+					//go into CitiesMaps, find cities associated with r.getDest1 and r.getDest2
+					//go into their adjacencies and set the Path object’s cost to 999.
+					c1.findPath(r.getDest2()).weight = 999;
+					c2.findPath(r.getDest1()).weight = 999;
+				}
+				else if (owner.getName() == "Skylar") {
+					//if we already own it then set weights to 0
+					c1.findPath(r.getDest2()).weight = 0;
+					c2.findPath(r.getDest1()).weight = 0;
+				}
 			}
 		}
 	}

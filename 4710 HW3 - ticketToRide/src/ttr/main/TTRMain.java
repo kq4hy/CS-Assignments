@@ -2,7 +2,7 @@ package ttr.main;
 
 import ttr.model.player.HumanPlayer;
 import ttr.model.player.Player;
-import ttr.model.player.StupidPlayer;
+import ttr.model.player.Skylar;
 import ttr.view.scenes.TTRGamePlayScene;
 
 public class TTRMain {
@@ -15,7 +15,7 @@ public class TTRMain {
 		
 		/* Initialize two players */
 		Player player1 = new HumanPlayer("Human Player");
-		Player player2 = new StupidPlayer("Smart Bot");
+		Player player2 = new Skylar("Skylar");
 		
 		/*Optional: You can hide one or both of the player's stats (say, if you want to play against an AI without looking at their cards*/
 		//player2.setHideStats(true);
