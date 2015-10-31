@@ -19,7 +19,6 @@ public class Skylar extends Player {
 	public Routes routesList = Routes.getInstance();
 	public ArrayList<Route> allRoutes = routesList.getAllRoutes();
 	public HashMap<TrainCardColor, Integer> current_train_cards = new HashMap<TrainCardColor, Integer>();
-	public HashMap<Route, Integer> routes_to_claim = new HashMap<Route, Integer>();
 	//public ArrayList<City> Cities = new ArrayList<City>();
 	public HashMap<Destination,City> CitiesMap = new HashMap<Destination,City>();
 	public List<TrainCardColor> color_list = Arrays.asList(TrainCardColor.rainbow, TrainCardColor.black, 
@@ -41,6 +40,7 @@ public class Skylar extends Player {
 	public void makeMove() {
 		routesList = Routes.getInstance();
 		allRoutes = routesList.getAllRoutes();
+		HashMap<Route, Integer> routes_to_claim = new HashMap<Route, Integer>();
 		compute_hand();
 		update_graph();
 		ArrayList<DestinationTicket> curr_destinations = this.getDestinationTickets();
@@ -60,6 +60,7 @@ public class Skylar extends Player {
 		if(curr_state == unbuy_able) {
 			// calculate reward and then move
 			int maximum_reward = 0;
+			Action best_action = curr_state.get_actions().get(0);
 			for(Action a: curr_state.get_actions()) {
 				if(a.name.equals("a3")) {
 					// a3: amount of points that the player receives from claiming a route after drawing a train color card
@@ -72,8 +73,10 @@ public class Skylar extends Player {
 					if(curr_buyable_routes.size() > 0) {
 						HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
 						int count = 0;
-						while(count >= curr_buyable_routes.size() - 1) {
-							count = 0;
+						while(count != curr_buyable_routes.size() - 1) {
+							if(count == curr_buyable_routes.size())
+								break;
+							count = 0;							
 							for(Route buy_route: curr_buyable_routes) {
 								int cost = buy_route.getCost();
 								TrainCardColor color_needed = buy_route.getColor();
@@ -99,9 +102,11 @@ public class Skylar extends Player {
 						total_reward += maximum_points / 9; 
 					}
 					a.set_reward((int)total_reward);
-					if((int) total_reward > maximum_reward)
+					if((int) total_reward > maximum_reward) {
 						maximum_reward = (int)total_reward;
-					System.out.println("a3 reward is: " + (int)total_reward);
+						best_action =  a;
+					}
+ 					System.out.println("a3 reward is: " + (int)total_reward);
 				} if(a.name.equals("a4")) {
 					// a4: amount of points that you can get if you save up a specific color instead of buying immediately					
 					// just return the maximum number of points AI can get if saving up
@@ -111,22 +116,37 @@ public class Skylar extends Player {
 							curr_maxim = entry.getValue();
 					} 
 					a.set_reward(curr_maxim);
-					if(curr_maxim > maximum_reward)
+					if(curr_maxim > maximum_reward) {
 						maximum_reward = curr_maxim;
-					System.out.println("a4 reward is: " + curr_maxim);
+						best_action = a;
+					}
+					System.out.println("a4 reward is: " + a.get_reward());
 				} if(a.name.equals("a5")) {
 					// a5: 25 - sum of current points from the destination cards	
 					if(curr_destinations.size() > 4 || this.getTotalDestTicketCost() >= 25)
 						a.set_reward(0);
 					else
 						a.set_reward(25 - this.getTotalDestTicketCost());
-					if(a.get_reward() > maximum_reward)
-						maximum_reward = a.get_reward();	
+					if(a.get_reward() > maximum_reward) {
+						maximum_reward = a.get_reward();
+						best_action = a;
+					}
 					System.out.println("a5 reward is: " + a.get_reward());
 				}
 			}
+			
+			// largest reward has been calculated, perform the correct action here
+			System.out.println("Best action to take is: " + best_action.get_name());
+			if(best_action.get_name() == "a3") {
+				curr_state = buy_able;
+				super.drawTrainCard(0);
+			} else if(best_action.get_name() == "a4") {
+				super.drawTrainCard(0);
+			} else {
+				super.drawDestinationTickets();
+			}
 		}
-		else if(curr_state == buy_able){
+		else if(curr_state == buy_able) {
 			// calculate reward and then move
 			ArrayList<Route> buyable_routes = get_buyable_routes(routes_to_claim, current_train_cards);
 			Route maximum_route;
@@ -136,7 +156,10 @@ public class Skylar extends Player {
 					HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
 					int count = 0;
 					int sum = 0;
-					while(count != temp_hand.size() - 1) {
+					while(count != buyable_routes.size() - 1) {
+						System.out.println("Current count is: " + count + " and buyable_routes size is: " + buyable_routes.size());
+						if(count == buyable_routes.size() - 1)
+							break;
 						count = 0;
 						for(Route buy_route: buyable_routes) {
 							int cost = buy_route.getCost();
@@ -169,6 +192,7 @@ public class Skylar extends Player {
 					System.out.println("a2 reward is: " + maxi);
 				}
 			}
+			// largest reward has been calculated, perform the correct action here
 			
 		}
 		super.drawTrainCard(0);
@@ -414,6 +438,7 @@ public class Skylar extends Player {
 			currState = curr_state;
 			nextState = next_state;
 		}
+		public String get_name() { return name; }
 		public int get_reward() { return reward; }
 		public void set_reward(int i) { reward = i; }
 	}
