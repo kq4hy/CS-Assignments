@@ -64,12 +64,12 @@ public class Skylar extends Player {
 				if(a.name.equals("a3")) {
 					// a3: amount of points that the player receives from claiming a route after drawing a train color card
 					// calculate the probability of getting a certain color
-					HashMap<TrainCardColor, Integer> temp_hand = new HashMap<TrainCardColor, Integer>();
+					HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
 					double total_reward = 0;
 					for(TrainCardColor curr_color: color_list) {
 						temp_hand.put(curr_color, temp_hand.get(curr_color) + 1);
 						ArrayList<Route> buyable_routes = get_buyable_routes(routes_to_claim, temp_hand);
-						int maximum_points = 0;
+						double maximum_points = 0;
 						if(buyable_routes.size() !=  0) {
 							for(Route r : buyable_routes) {
 								if(routes_to_claim.get(r) > maximum_points)
