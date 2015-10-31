@@ -49,7 +49,7 @@ public class Skylar extends Player {
 			list_routes = getShortestPath(ticket.getFrom(), ticket.getTo());
 		    System.out.println("Path: " + list_routes);
 			for(Route r: list_routes){
-				if(routes_to_claim.get(r) == null)
+				if(!routes_to_claim.containsKey(r))
 					routes_to_claim.put(r, 0);
 				routes_to_claim.put(r, routes_to_claim.get(r) + r.getPoints());
 			}
@@ -66,10 +66,13 @@ public class Skylar extends Player {
 					// calculate the probability of getting a certain color
 					double total_reward = 0;
 					ArrayList<Route> curr_buyable_routes = get_buyable_routes(routes_to_claim, current_train_cards);
+					System.out.println("Routes you want to claim: " + routes_to_claim.toString());
+					System.out.println("Current hand is: " + current_train_cards.toString());
+					System.out.println("Current buyable routes: " + curr_buyable_routes.toString());
 					if(curr_buyable_routes.size() > 0) {
 						HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
 						int count = 0;
-						while(count != temp_hand.size() - 1) {
+						while(count >= curr_buyable_routes.size() - 1) {
 							count = 0;
 							for(Route buy_route: curr_buyable_routes) {
 								int cost = buy_route.getCost();
@@ -174,7 +177,7 @@ public class Skylar extends Player {
 	// organizes a HashMap in accordance with how many train cards and of what color
 	public void compute_hand() { 
 		for(TrainCardColor a: color_list) {
-			if(current_train_cards.get(a) == null)
+			if(!current_train_cards.containsKey(a))
 				current_train_cards.put(a, 0);
 			current_train_cards.put(a, this.getNumTrainCardsByColor(a));
 		}
@@ -187,8 +190,10 @@ public class Skylar extends Player {
 			TrainCardColor color_req = entry.getKey().getColor();
 			int cost = entry.getKey().getCost();
 			int num_trains = curr_hand.get(color_req);
-			if(cost <= num_trains) 
-				ret_route.add(entry.getKey());
+			if(cost <= num_trains) {
+				if(!ret_route.contains(entry.getKey()))
+					ret_route.add(entry.getKey());
+			}
 		}
 		return ret_route;
 	}
