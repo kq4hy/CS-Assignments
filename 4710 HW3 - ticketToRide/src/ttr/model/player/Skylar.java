@@ -64,9 +64,26 @@ public class Skylar extends Player {
 				if(a.name.equals("a3")) {
 					// a3: amount of points that the player receives from claiming a route after drawing a train color card
 					// calculate the probability of getting a certain color
-					HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
 					double total_reward = 0;
+					ArrayList<Route> curr_buyable_routes = get_buyable_routes(routes_to_claim, current_train_cards);
+					if(curr_buyable_routes.size() > 0) {
+						HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
+						int count = 0;
+						while(count != temp_hand.size() - 1) {
+							count = 0;
+							for(Route buy_route: curr_buyable_routes) {
+								int cost = buy_route.getCost();
+								TrainCardColor color_needed = buy_route.getColor();
+								if(temp_hand.get(color_needed) >= cost) {
+									total_reward += routes_to_claim.get(buy_route);
+									temp_hand.put(color_needed, temp_hand.get(color_needed) - cost);
+								} else
+									count++;
+							}
+						}
+					}
 					for(TrainCardColor curr_color: color_list) {
+						HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
 						temp_hand.put(curr_color, temp_hand.get(curr_color) + 1);
 						ArrayList<Route> buyable_routes = get_buyable_routes(routes_to_claim, temp_hand);
 						double maximum_points = 0;
@@ -121,7 +138,7 @@ public class Skylar extends Player {
 						for(Route buy_route: buyable_routes) {
 							int cost = buy_route.getCost();
 							TrainCardColor color_needed = buy_route.getColor();
-							if(temp_hand.get(color_needed) <= cost) {
+							if(temp_hand.get(color_needed) >= cost) {
 								sum += routes_to_claim.get(buy_route);
 								temp_hand.put(color_needed, temp_hand.get(color_needed) - cost);
 							} else
