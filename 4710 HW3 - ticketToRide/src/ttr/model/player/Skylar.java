@@ -158,10 +158,10 @@ public class Skylar extends Player {
 //					System.out.println("a4 reward is: " + a.get_reward());
 				} if(a.name.equals("a5")) {
 					// a5: 25 - sum of current points from the destination cards	
-					if(curr_destinations.size() > 4 || this.getTotalDestTicketCost() >= 25)
+					if(curr_destinations.size() > 4 || this.getTotalDestTicketCost() >= 15)
 						a.set_reward(0);
 					else
-						a.set_reward(25 - this.getTotalDestTicketCost());
+						a.set_reward(15 - this.getTotalDestTicketCost());
 					if(a.get_reward() > maximum_reward) {
 						maximum_reward = a.get_reward();
 						best_action = a;
