@@ -90,14 +90,14 @@ public class Skylar extends Player {
 							int cost = buy_route.getCost();
 							TrainCardColor color_needed = buy_route.getColor();
 							if(color_needed != TrainCardColor.rainbow) {
-								if(temp_hand.get(color_needed) + this.getNumTrainCardsByColor(TrainCardColor.rainbow) >= cost) {
+								if(temp_hand.get(color_needed) + temp_hand.get(TrainCardColor.rainbow) >= cost) {
 									total_reward += routes_to_claim.get(buy_route);
-									if(temp_hand.get(color_needed) < cost) {
-										int extras = cost - temp_hand.get(color_needed);
-										temp_hand.put(color_needed, 0);
-										temp_hand.put(TrainCardColor.rainbow, temp_hand.get(TrainCardColor.rainbow) - extras);
-									} else 
-										temp_hand.put(color_needed, temp_hand.get(color_needed) - cost);
+//									if(temp_hand.get(color_needed) < cost) {
+//										int extras = cost - temp_hand.get(color_needed);
+//										temp_hand.put(color_needed, 0);
+//										temp_hand.put(TrainCardColor.rainbow, temp_hand.get(TrainCardColor.rainbow) - extras);
+//									} else 
+									temp_hand.put(color_needed, temp_hand.get(color_needed) - cost);
 								}
 							}
 						}
@@ -110,15 +110,14 @@ public class Skylar extends Player {
 									if(c == TrainCardColor.rainbow)
 										continue;
 									else {
-										if(temp_hand.get(c) + this.getNumTrainCardsByColor(TrainCardColor.rainbow) >= cost) {
-											total_reward += routes_to_claim.get(buy_route);
-											if(temp_hand.get(c) < cost) {
-												int extras = cost - temp_hand.get(c);
-												temp_hand.put(c, 0);
-												temp_hand.put(TrainCardColor.rainbow, temp_hand.get(TrainCardColor.rainbow) - extras);
-											} else 
-												temp_hand.put(c, temp_hand.get(c) - cost);
-										}
+//										if(temp_hand.get(c) + temp_hand.get(TrainCardColor.rainbow) >= cost) {
+//											total_reward += routes_to_claim.get(buy_route);
+//											if(temp_hand.get(c) < cost) {
+//												int extras = cost - temp_hand.get(c);
+//												temp_hand.put(c, 0);
+//												temp_hand.put(TrainCardColor.rainbow, temp_hand.get(TrainCardColor.rainbow) - extras);
+//											} else 
+										temp_hand.put(c, temp_hand.get(c) - cost);
 									}
 								}
 							}
@@ -142,7 +141,7 @@ public class Skylar extends Player {
 						maximum_reward = (int)total_reward;
 						best_action =  a;
 					}
- 					System.out.println("a3 reward is: " + (int)total_reward);
+// 					System.out.println("a3 reward is: " + (int)total_reward);
 				} if(a.name.equals("a4")) {
 					// a4: amount of points that you can get if you save up a specific color instead of buying immediately					
 					// just return the maximum number of points AI can get if saving up
@@ -156,7 +155,7 @@ public class Skylar extends Player {
 						maximum_reward = curr_maxim;
 						best_action = a;
 					}
-					System.out.println("a4 reward is: " + a.get_reward());
+//					System.out.println("a4 reward is: " + a.get_reward());
 				} if(a.name.equals("a5")) {
 					// a5: 25 - sum of current points from the destination cards	
 					if(curr_destinations.size() > 4 || this.getTotalDestTicketCost() >= 25)
@@ -167,19 +166,19 @@ public class Skylar extends Player {
 						maximum_reward = a.get_reward();
 						best_action = a;
 					}
-					System.out.println("a5 reward is: " + a.get_reward());
+//					System.out.println("a5 reward is: " + a.get_reward());
 				}
 			}
 			
 			// largest reward has been calculated, perform the correct action here
-			System.out.println("Best action to take is: " + best_action.get_name());
+//			System.out.println("Best action to take is: " + best_action.get_name());
 			int index = 0;
 			if(best_action.get_name() == "a3") {
 				curr_state = buy_able;
 				for(TrainCard card: getFaceUpCards()) {
 					index++;
 					if(card.getColor() == TrainCardColor.rainbow) {
-						System.out.println("Drawing from: " + index);
+//						System.out.println("Drawing from: " + index);
 						super.drawTrainCard(index);
 					}
 				}
@@ -188,7 +187,7 @@ public class Skylar extends Player {
 				for(TrainCard card: getFaceUpCards()) {
 					index++;
 					if(card.getColor() == TrainCardColor.rainbow) {
-						System.out.println("Drawing from: " + index);
+//						System.out.println("Drawing from: " + index);
 						super.drawTrainCard(index);
 					}
 				}
@@ -201,7 +200,7 @@ public class Skylar extends Player {
 			// calculate reward and then move
 			ArrayList<Route> buyable_routes = get_buyable_routes(routes_to_claim, current_train_cards);
 			
-			System.out.println("Unsorted buyable routes is: " + buyable_routes.toString());
+//			System.out.println("Unsorted buyable routes is: " + buyable_routes.toString());
 			// sort buyable_routes in order of reward
 			Collections.sort(buyable_routes, new Comparator<Route>() {
 				public int compare(Route r1, Route r2) {
@@ -213,53 +212,23 @@ public class Skylar extends Player {
 				}
 			});
 			
-			System.out.println("Sorted buyable routes is: " + buyable_routes.toString());
+//			System.out.println("Sorted buyable routes is: " + buyable_routes.toString());
 			Route maximum_route = null;
 			int maximum_reward = 0;
 			Action best_action = curr_state.get_actions().get(0);
-			System.out.println("Current hand is: " + current_train_cards);
+//			System.out.println("Current hand is: " + current_train_cards);
 			for(Action a: curr_state.get_actions()) {
 				if (a.name.equals("a1")) {
 					// a1: the number of points that the player gets for claiming that route as well as all subsequent routes that it can claim
 					HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
 					int total_reward = 0;
 					if (buyable_routes.size() != 0) {
-						// process all non-rainbow tracks first
 						for(Route buy_route: buyable_routes) {
-							int cost = buy_route.getCost();
-							TrainCardColor color_needed = buy_route.getColor();
-							if(color_needed != TrainCardColor.rainbow) {
-								if(temp_hand.get(color_needed) + this.getNumTrainCardsByColor(TrainCardColor.rainbow) >= cost) {
-									total_reward += routes_to_claim.get(buy_route);
-									if(temp_hand.get(color_needed) < cost) {
-										int extras = cost - temp_hand.get(color_needed);
-										temp_hand.put(color_needed, 0);
-										temp_hand.put(TrainCardColor.rainbow, temp_hand.get(TrainCardColor.rainbow) - extras);
-									} else
-										temp_hand.put(color_needed, temp_hand.get(color_needed) - cost);
-								}
-							}
-						}
-						// process all rainbow tracks afterwards
-						for(Route buy_route: buyable_routes) {
-							int cost = buy_route.getCost();
-							TrainCardColor color_needed = buy_route.getColor();
-							if(color_needed == TrainCardColor.rainbow) {
-								for(TrainCardColor c: color_list) {
-									if(c == TrainCardColor.rainbow)
-										continue;
-									else {
-										if(temp_hand.get(c) + this.getNumTrainCardsByColor(TrainCardColor.rainbow) >= cost) {
-											total_reward += routes_to_claim.get(buy_route);
-											if(temp_hand.get(c) < cost) {
-												int extras = cost - temp_hand.get(c);
-												temp_hand.put(c, 0);
-												temp_hand.put(TrainCardColor.rainbow, temp_hand.get(TrainCardColor.rainbow) - extras);
-											} else 
-												temp_hand.put(c, temp_hand.get(c) - cost);
-										}
-									}
-								}
+ 							int cost = buy_route.getCost();
+ 							TrainCardColor color_needed = buy_route.getColor();
+							if(temp_hand.get(color_needed) >= cost) {
+								total_reward += routes_to_claim.get(buy_route);
+								temp_hand.put(color_needed, temp_hand.get(color_needed) - cost);
 							}
 						}
 					}
@@ -269,7 +238,7 @@ public class Skylar extends Player {
 						maximum_reward = total_reward;
 						best_action = a; 
 					}
-					System.out.println("a1 reward is: " + total_reward);
+//					System.out.println("a1 reward is: " + total_reward);
 					
 				} if(a.name.equals("a2")) {
 					// a2: number of points that the player can receive for claiming that single route and then going back to the sate of un-buy-able
@@ -285,11 +254,11 @@ public class Skylar extends Player {
 						maximum_reward = maxi;
 						best_action = a; 
 					}
-					System.out.println("a2 reward is: " + maxi);
+//					System.out.println("a2 reward is: " + maxi);
 				}
 			}
 			// largest reward has been calculated, perform the correct action here
-			System.out.println("Best action to take is: " + best_action.get_name());
+//			System.out.println("Best action to take is: " + best_action.get_name());
 			if(best_action.get_name() == "a1") {
 				curr_state = buy_able;
 			} else if(best_action.get_name() == "a2") {
@@ -445,13 +414,13 @@ public class Skylar extends Player {
 	    	return this.name == other.name;
 	    }
 	    
-	    public void exfoliate() {
-	    	System.out.print(this.name + ": ");
-	    	for (Path p: adjacencies) {
-	    		System.out.print(p.target.name + ", " + p.weight + " ");
-	    	}
-	    	System.out.println("");
-	    }
+//	    public void exfoliate() {
+////	    	System.out.print(this.name + ": ");
+//	    	for (Path p: adjacencies) {
+//	    		System.out.print(p.target.name + ", " + p.weight + " ");
+//	    	}
+//	    	System.out.println("");
+//	    }
 	    
 	    public boolean containsPath(Path p) {
 	    	for (Path pat: this.adjacencies) {
