@@ -93,6 +93,7 @@ public abstract class Player extends EventDispatcher{
 		if(claimedRoutes.contains(route)) return false;
 		if(numTrainPieces < route.getCost()) return false;
 		if(route.getColor() != colorToUse && route.getColor() != TrainCardColor.rainbow && colorToUse != TrainCardColor.rainbow) return false;
+		System.out.println("Total number of cards we can use is: " + this.getNumTrainCardsByColor(colorToUse) + this.getNumTrainCardsByColor(TrainCardColor.rainbow));
 		if(colorToUse != TrainCardColor.rainbow){
 			if(this.getNumTrainCardsByColor(colorToUse) + this.getNumTrainCardsByColor(TrainCardColor.rainbow) < route.getCost()) return false;
 		}

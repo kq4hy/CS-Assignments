@@ -3,6 +3,7 @@ package ttr.model.player;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,9 +22,9 @@ public class Skylar extends Player {
 	public HashMap<TrainCardColor, Integer> current_train_cards = new HashMap<TrainCardColor, Integer>();
 	//public ArrayList<City> Cities = new ArrayList<City>();
 	public HashMap<Destination,City> CitiesMap = new HashMap<Destination,City>();
-	public List<TrainCardColor> color_list = Arrays.asList(TrainCardColor.rainbow, TrainCardColor.black, 
+	public List<TrainCardColor> color_list = Arrays.asList(TrainCardColor.black, TrainCardColor.yellow, 
 			TrainCardColor.blue, TrainCardColor.green, TrainCardColor.orange, TrainCardColor.purple, 
-			TrainCardColor.red, TrainCardColor.white, TrainCardColor.yellow); 
+			TrainCardColor.red, TrainCardColor.white, TrainCardColor.rainbow); 
 	
 	public Skylar(String name) {
 		super(name);
@@ -49,13 +50,16 @@ public class Skylar extends Player {
 			list_routes = getShortestPath(ticket.getFrom(), ticket.getTo());
 		    System.out.println("Path: " + list_routes);
 			for(Route r: list_routes){
-				if(!routes_to_claim.containsKey(r))
-					routes_to_claim.put(r, 0);
-				routes_to_claim.put(r, routes_to_claim.get(r) + r.getPoints());
+				if(!this.getPlayerClaimedRoutes().contains(r)) {
+					if(!routes_to_claim.containsKey(r))
+						routes_to_claim.put(r, 0);
+					routes_to_claim.put(r, routes_to_claim.get(r) + r.getPoints());
+				}
 			}
 			CitiesMap.clear();
 			initiateGraph();
 		}
+		System.out.println("Paths to claim are: " + routes_to_claim.toString());
 		
 		if(curr_state == unbuy_able) {
 			// calculate reward and then move
@@ -67,24 +71,46 @@ public class Skylar extends Player {
 					// calculate the probability of getting a certain color
 					double total_reward = 0;
 					ArrayList<Route> curr_buyable_routes = get_buyable_routes(routes_to_claim, current_train_cards);
+					Collections.sort(curr_buyable_routes, new Comparator<Route>() {
+						public int compare(Route r1, Route r2) {
+							if(r1.getPoints() > r2.getPoints())
+								return -1;
+							if(r1.getPoints() < r2.getPoints())
+								return 1;
+							return 0;
+						}
+					});
 					System.out.println("Routes you want to claim: " + routes_to_claim.toString());
 					System.out.println("Current hand is: " + current_train_cards.toString());
 					System.out.println("Current buyable routes: " + curr_buyable_routes.toString());
 					if(curr_buyable_routes.size() > 0) {
 						HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
-						int count = 0;
-						while(count != curr_buyable_routes.size() - 1) {
-							if(count == curr_buyable_routes.size())
-								break;
-							count = 0;							
-							for(Route buy_route: curr_buyable_routes) {
-								int cost = buy_route.getCost();
-								TrainCardColor color_needed = buy_route.getColor();
-								if(temp_hand.get(color_needed) >= cost) {
+						// process all non-rainbow tracks first
+						for(Route buy_route: curr_buyable_routes) {
+							int cost = buy_route.getCost();
+							TrainCardColor color_needed = buy_route.getColor();
+							if(color_needed != TrainCardColor.rainbow) {
+								if(temp_hand.get(color_needed) + this.getNumTrainCardsByColor(TrainCardColor.rainbow) >= cost) {
 									total_reward += routes_to_claim.get(buy_route);
 									temp_hand.put(color_needed, temp_hand.get(color_needed) - cost);
-								} else
-									count++;
+								}
+							}
+						}
+						// process all rainbow tracks afterwards
+						for(Route buy_route: curr_buyable_routes) {
+							int cost = buy_route.getCost();
+							TrainCardColor color_needed = buy_route.getColor();
+							if(color_needed == TrainCardColor.rainbow) {
+								for(TrainCardColor c: color_list) {
+									if(c == TrainCardColor.rainbow)
+										continue;
+									else {
+										if(temp_hand.get(c) + this.getNumTrainCardsByColor(TrainCardColor.rainbow) >= cost) {
+											total_reward += routes_to_claim.get(buy_route);
+											temp_hand.put(c, temp_hand.get(color_needed) - cost);
+										}
+									}
+								}
 							}
 						}
 					}
@@ -149,12 +175,27 @@ public class Skylar extends Player {
 		else if(curr_state == buy_able) {
 			// calculate reward and then move
 			ArrayList<Route> buyable_routes = get_buyable_routes(routes_to_claim, current_train_cards);
+			
+			System.out.println("Unsorted buyable routes is: " + buyable_routes.toString());
+			// sort buyable_routes in order of reward
+			Collections.sort(buyable_routes, new Comparator<Route>() {
+				public int compare(Route r1, Route r2) {
+					if(r1.getPoints() > r2.getPoints())
+						return -1;
+					if(r1.getPoints() < r2.getPoints())
+						return 1;
+					return 0;
+				}
+			});
+			
+			System.out.println("Sorted buyable routes is: " + buyable_routes.toString());
 			ArrayList<Route> actual_buyable_routes = new ArrayList<Route>(); //used for a1
 			
 			Route maximum_route = null;
 
 			int maximum_reward = 0;
-			Action best_action = null;
+			Action best_action = curr_state.get_actions().get(0);
+			System.out.println("Current hand is: " + current_train_cards);
 			for(Action a: curr_state.get_actions()) {
 				if (a.name.equals("a1")) {
 					HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
@@ -207,7 +248,7 @@ public class Skylar extends Player {
 						}
 					}
 					a.set_reward(maxi);
-					if(maxi > maximum_reward) {
+					if(maxi >= maximum_reward) {
 						maximum_reward = maxi;
 						best_action = a; 
 					}
@@ -232,7 +273,21 @@ public class Skylar extends Player {
 					}
 				}
 			}
-			super.claimRoute(maximum_route, maximum_route.getColor());
+			TrainCardColor color_touse = maximum_route.getColor();
+			if(maximum_route.getColor() == TrainCardColor.rainbow) {
+				int cost = maximum_route.getCost() - this.getNumTrainCardsByColor(TrainCardColor.rainbow);
+				for(TrainCardColor color : color_list) {
+					if(color == TrainCardColor.rainbow)
+						continue;
+					else {
+						if(current_train_cards.get(color) >= cost) {
+							color_touse = color;
+							break;
+						}
+					}
+				}
+			}
+			super.claimRoute(maximum_route, color_touse);
 		}
 		
 		//super.drawTrainCard(0);
@@ -253,8 +308,17 @@ public class Skylar extends Player {
 		for(Map.Entry<Route, Integer> entry : curr_routes.entrySet()){ 
 			TrainCardColor color_req = entry.getKey().getColor();
 			int cost = entry.getKey().getCost();
-			int num_trains = curr_hand.get(color_req);
-			if(cost <= num_trains) {
+			if(color_req == TrainCardColor.rainbow) {
+				for(TrainCardColor color: color_list) {
+					if(color == TrainCardColor.rainbow) 
+						continue;
+					else {
+						if(cost <= curr_hand.get(color) + this.getNumTrainCardsByColor(TrainCardColor.rainbow) && !ret_route.contains(entry.getKey()))
+							ret_route.add(entry.getKey());
+					}
+				}
+			}
+			if(cost <= curr_hand.get(color_req) + this.getNumTrainCardsByColor(TrainCardColor.rainbow)) {
 				if(!ret_route.contains(entry.getKey()))
 					ret_route.add(entry.getKey());
 			}
@@ -280,13 +344,13 @@ public class Skylar extends Player {
 				if (owner.getName() != "Skylar") {
 					//go into CitiesMaps, find cities associated with r.getDest1 and r.getDest2
 					//go into their adjacencies and set the Path object�s cost to 999.
-					c1.findPath(r.getDest2()).weight = 999;
-					c2.findPath(r.getDest1()).weight = 999;
+					c1.adjacencies.remove(c1.findPath(r.getDest2()));
+					c2.adjacencies.remove(c2.findPath(r.getDest1()));
 				}
 				else if (owner.getName() == "Skylar") {
 					//if we already own it then set weights to 0
-					c1.findPath(r.getDest2()).weight = 0;
-					c2.findPath(r.getDest1()).weight = 0;
+					c1.findPath(r.getDest2()).weight = 1;
+					c2.findPath(r.getDest1()).weight = 1;
 				}
 			}
 		}
