@@ -17,7 +17,7 @@ The basic algorithmic approach that we took was to manipulate the Markov Design 
 3. A reward function *R(s,a)*.
 4. A description *T* of each action's effects in each state.
 
-Similarly for this AI, those same four attributes were used with the following definitions:
+Similarly for this AI, which we affectionately named Skylar, those same four attributes were used with the following definitions:
 
 1. Set of possible states would be either *buy-able* or *un-buy-able*.
 2. From the *buy-able* state, there would be two actions, able to claim more than one route (a1) and only able to claim one route (a2).
@@ -33,12 +33,16 @@ By playing the game in two states of *buy-able* and *un-buy-able*, points can be
 
 #### Testing
 ---
+- Describe in detail how you tested your strategy. How did you detect issues with your AI’s approach? Give me some specific examples of testing you did and what these tests helped you learn about your approach to the game.
+
+We extensively tested our strategy as we developed it, thus catching issues and optimizing to improve the AI as we progressed. We manually tested our AI for the most part. First, we tested it against the human player that only drew cards to see if Skylar was correctly assessing the routes he needed to claim to finish his destination cards. While doing this, we found that we should prioritize getting the longer/colored routes over the smaller ones, thus refining our a1 and a2 actions/algorithms. Then we tested to see how Skylar reacted when the other player claimd routes that Skylar needed, forcing Skylar to reroute in order to finish his destinations. Skylar will work with the other player's choices and still try it's best to complete its destinations. One thing we noticed during testing is that if Skylar's first two destination cards are both relatively low-valued, it was more efficient for Skylar to pull two more destination cards at the beginning rather than finish the initial two it draws before drawing two more destination cards. We set the required sum of destination rewards at the beginning to be 25. If the first two cards drawn initially don't add up to 25, we immediately draw 2 more destination cards at the beginning. Since we place greater value towards shared routes, having 4 at the beginning to evaluate increases the chances of having shared routes, thus making the overall path-finding and claiming algorithm more efficient. 
 
 
 #### Data Analysis
 ---
+Give me some data on how well your AI plays against some baselines. Maybe implement a quick random AI and see how well your implementation does. Analyze your results and discuss. If you tested against others, give me some data on how well your AI did. Where does your code fail and/or succeed? Why is that the case?
 
-
+We made several improvements to our AI as we tested and worked on Skylar. At first, when we looked ahead in our a1 and a3 states, we didn't consider the value of grey tracks or the value of rainbow cards in our hand, prioritizing colored tracks over grey tracks. That threw off our a3 Q-values in our unbuyable state, resulting in an average of ~28 turns passing before Skylar was ready to claim routes. After observing that while testing, we realized that that's very unrealistic, and that Skylar should try to buy earlier. We re-evalutated our code that handled buyable paths evaluation and decided to order the routes that we needed to claim to meet our destination card requirements by the cost to purchase the route, with colored tracks having precedence over grey tracks. This is a viable decision since colored tracks are in general longer than grey tracks with one-cost routes only being grey tracks since they're easily obtained (low priority). By ordering the list of buyable routes, we can evaluate claiming them with a focus on the longer/more specific routes and our look-ahead for a1 would account for that as well, being able to loop through the buyable routes. 
 
 
 
