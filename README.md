@@ -6,12 +6,10 @@ Theorem prover using the concepts of forward and backward chaining. Written in P
 
 ## Homework 2
 Robot Pathfinding using A* algorithm and then our own implementation when not guranteed to return accurate result when pinging. 
-Written in Java, grade not returned.
+Written in Java, received 6/10. Unknown maze does not work.
 
 ## Homework 3
-Implementation of Ticket to Ride game. Should use Markov Decision Processes to handle AI. Written in Java, not submitted yet.
+Implementation of Ticket to Ride game. The AI uses Markov Decision Process to handle what decision to make. Written in Java, grade not received. 
 
 ## Authors
-Kevin Qian (kq4hy@virginia.edu) 
-&
-Jiayi Wang (jw6dz@virginia.edu)
+Kevin Qian (kq4hy@virginia.edu) & Jiayi Wang (jw6dz@virginia.edu)
