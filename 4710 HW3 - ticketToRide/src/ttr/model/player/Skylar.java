@@ -149,15 +149,19 @@ public class Skylar extends Player {
 		else if(curr_state == buy_able) {
 			// calculate reward and then move
 			ArrayList<Route> buyable_routes = get_buyable_routes(routes_to_claim, current_train_cards);
-			Route maximum_route;
+			ArrayList<Route> actual_buyable_routes = new ArrayList<Route>(); //used for a1
+			
+			Route maximum_route = null;
+
 			int maximum_reward = 0;
+			Action best_action = null;
 			for(Action a: curr_state.get_actions()) {
 				if (a.name.equals("a1")) {
 					HashMap<TrainCardColor, Integer> temp_hand = current_train_cards;
 					int count = 0;
 					int sum = 0;
-					while(count != buyable_routes.size() - 1) {
-						System.out.println("Current count is: " + count + " and buyable_routes size is: " + buyable_routes.size());
+					/*while(count <= buyable_routes.size() - 1) {
+						System.out.println("Current count is: " + count + " and buyable_routes size is: " + buyable_routes.size() + " and sum is: " + sum);
 						if(count == buyable_routes.size() - 1)
 							break;
 						count = 0;
@@ -170,10 +174,26 @@ public class Skylar extends Player {
 							} else
 								count++;
 						}
+						//count += 9999;
+					}*/
+					if (buyable_routes.size() != 0) { 
+						for(Route buy_route: buyable_routes) {
+							int cost = buy_route.getCost();
+							TrainCardColor color_needed = buy_route.getColor();
+							if(temp_hand.get(color_needed) >= cost) {
+								sum += routes_to_claim.get(buy_route);
+								temp_hand.put(color_needed, temp_hand.get(color_needed) - cost);
+								actual_buyable_routes.add(buy_route);
+							} //else
+								//count++;
+						}
 					}
+					
 					a.set_reward(sum);
-					if(sum > maximum_reward) 
+					if(sum > maximum_reward)  {
 						maximum_reward = sum;
+						best_action = a; 
+					}
 					System.out.println("a1 reward is: " + sum);
 					// a1: the number of points that the player gets for claiming that route as well as all subsequent routes that it can claim
 					
@@ -187,15 +207,35 @@ public class Skylar extends Player {
 						}
 					}
 					a.set_reward(maxi);
-					if(maxi > maximum_reward) 
+					if(maxi > maximum_reward) {
 						maximum_reward = maxi;
+						best_action = a; 
+					}
 					System.out.println("a2 reward is: " + maxi);
 				}
 			}
 			// largest reward has been calculated, perform the correct action here
-			
+			System.out.println("Best action to take is: " + best_action.get_name());
+			if(best_action.get_name() == "a1") {
+				curr_state = buy_able;
+				//super.drawTrainCard(0);
+			} else if(best_action.get_name() == "a2") {
+				curr_state = unbuy_able;
+				//super.drawTrainCard(0);
+			} 
+			for (Route r: actual_buyable_routes) {
+				if (maximum_route == null) 
+					maximum_route = r;
+				else {
+					if (r.getPoints() > maximum_route.getPoints()) {
+						maximum_route = r;
+					}
+				}
+			}
+			super.claimRoute(maximum_route, maximum_route.getColor());
 		}
-		super.drawTrainCard(0);
+		
+		//super.drawTrainCard(0);
 	}
 	
 	// organizes a HashMap in accordance with how many train cards and of what color
