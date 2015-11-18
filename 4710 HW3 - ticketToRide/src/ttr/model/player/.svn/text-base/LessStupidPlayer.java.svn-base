@@ -1,0 +1,569 @@
+package ttr.model.player;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.PriorityQueue;
+import java.util.Scanner;
+
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+/**
+ * A very stupid player that simply draws train cards only. Shown as an example
+ * of implemented a player.
+ * */
+public class LessStupidPlayer extends Player {
+	ArrayList<TrainCard> hand;
+	ArrayList<DestinationTicket> tickets;
+	int blackCards = 0;
+	int whiteCards = 0;
+	int redCards = 0;
+	int blueCards = 0;
+	int purpleCards = 0;
+	int greenCards = 0;
+	int yellowCards = 0;
+	int orangeCards = 0;
+	int rainbowCards = 0;
+	int enemyTrainPieces = 45;
+	final double GRAY_WEIGHT = 0.7;
+	Destination goalFrom;
+	Destination goalTo;
+	ArrayList<Route> routes = new ArrayList<Route>(Routes.getInstance().getAllRoutes());
+	HashMap<Destination, DestinationNode> destinationList = new HashMap<Destination, DestinationNode>();
+	HashMap<TrainCardColor, Integer> cardHash = new HashMap<TrainCardColor, Integer>();
+
+	/**
+	 * Need to have this constructor so the player has a name, you can use no
+	 * parameters and pass the name of your player to the super constructor, or
+	 * just take in the name as a parameter. Both options are shown here.
+	 * */
+	public LessStupidPlayer(String name) {
+		super(name);
+	}
+
+	public LessStupidPlayer() {
+		super("Stupid Player");
+	}
+
+	/**
+	 * MUST override the makeMove() method and implement it.
+	 * */
+	@Override
+	public void makeMove() {
+
+		int numTrainPieces = getNumTrainPieces();
+
+		ArrayList<Route> toRemoveFromNeighbors = new ArrayList<Route>();
+		for (Route r1 : routes) {
+			if (r1.getOwner() != null && !r1.getOwner().equals(this)) {
+				for (Route r2 : routes) {
+					if (r1.getDest1().equals(r2.getDest1()) && r1.getDest2().equals(r2.getDest2())
+							|| (r1.getDest1().equals(r2.getDest2()) && r1.getDest2().equals(r2.getDest1()))) {
+						toRemoveFromNeighbors.add(r2);
+					}
+				}
+				enemyTrainPieces -= r1.getCost();
+			}
+			if (r1.getOwner() != null && r1.getOwner().equals(this)) {
+				TrainCardColor myRouteColor = r1.getColor();
+				for (Route r2 : routes) {
+					if (r1.getDest1().equals(r2.getDest1()) && r1.getDest2().equals(r2.getDest2())
+							|| (r1.getDest1().equals(r2.getDest2()) && r1.getDest2().equals(r2.getDest1()))) {
+						if (!r2.getColor().equals(myRouteColor)) {
+							toRemoveFromNeighbors.add(r2);
+						}
+					}
+				}
+			}
+		}
+
+		for (Route r : toRemoveFromNeighbors) {
+			routes.remove(r);
+		}
+
+		initializeDestNodes();
+		for (Destination d : destinationList.keySet()) {
+			destinationList.get(d).getNeighbors(routes);
+		}
+
+		// initialize hand
+		hand = this.getHand();
+		tickets = this.getDestinationTickets();
+		initializeHand();
+		Route r = null;
+		int decision = 2;
+		
+		// loop through destination cards
+		// find the destination card with the lowest weight (the last item's
+		// weight in the multiRoute array)
+		// build any piece you can on that route (favoring shorter ones)
+		// if you can't build anything on that destination card, 50% probability
+		// you'll try the other one and 50% probability you'll draw cards
+		// if there's only one destination card unfinished, instead of trying
+		// another one, draw a destination card
+
+		DestinationTicket best = null;
+		int lowestTicketCost = 9999;
+		ArrayList<DestinationNode> bestTicketRoute = null;
+
+		if (tickets.size() == 0 && numTrainPieces >= 10 && enemyTrainPieces > 8) {
+			drawDestinationTickets();
+			return;
+		}
+
+		// LOOP TO DELETE UNUSABLE ROUTES
+
+		// finds the ticket with the lowest weight that's usable
+		for (DestinationTicket d : tickets) {
+			ArrayList<DestinationNode> tempMultiRoute = getMultiRoute(destinationList.get(d.getFrom()), destinationList.get(d.getTo()));
+			if (tempMultiRoute != null && !tempMultiRoute.isEmpty())
+				if (lowestTicketCost > tempMultiRoute.get(tempMultiRoute.size() - 1).weight
+						&& tempMultiRoute.get(tempMultiRoute.size() - 1).cost <= numTrainPieces) {
+					best = d;
+					bestTicketRoute = tempMultiRoute;
+				}
+		}
+
+		// if no ticket accomplishes this (i.e. there's not enough train pieces:
+		if (best == null) {
+			Route largestAndCompletable = null;
+			int largestCompletableCost = 0;
+			if (numTrainPieces > 5) {
+				for (Route rt : routes) {
+					if (hasCards(rt) && rt.getCost() > 2 && rt.getOwner() == null && numTrainPieces >= rt.getCost()) {
+						if (largestCompletableCost < rt.getCost()) {
+							largestAndCompletable = rt;
+							largestCompletableCost = rt.getCost();
+						}
+					}
+				}
+				if (largestAndCompletable != null) {
+					if (largestAndCompletable.getColor().equals(TrainCardColor.rainbow)) {
+						claimRoute(largestAndCompletable, getMaxCardColor());
+						return;
+					} else {
+						claimRoute(largestAndCompletable, largestAndCompletable.getColor());
+						return;
+					}
+				} else
+					drawTrainCard(0);
+
+			} else {
+				for (int i = 5; i > 0; i--) {
+					for (Route rt : routes) {
+						if (hasCards(rt) && rt.getCost() == i && rt.getOwner() == null && numTrainPieces >= rt.getCost() && rt.getColor().equals(TrainCardColor.rainbow)) {
+							claimRoute(rt, getMaxCardColor());
+							return;
+						} else if (hasCards(rt) && numTrainPieces >= rt.getCost() && rt.getCost() == i && rt.getOwner() == null) {
+							claimRoute(rt, rt.getColor());
+							return;
+						}
+					}
+				}
+				drawTrainCard(0);
+			}
+			// if winning, play every available route, starting with max
+			// available value (with cost > 2)
+			// if numTrainPieces > 5, play any place you can
+		}
+
+		DestinationNode current = null;
+		DestinationNode last = null;
+		Route tempRoute = null;
+		Route bestRoute = null;
+
+		if (bestTicketRoute == null) {
+			drawTrainCard(0);
+			return;
+		}
+		for (DestinationNode d : bestTicketRoute) {
+			if (current != null)
+				last = current;
+			current = d;
+			if (current != null && last != null) {
+				tempRoute = getAdjRoute(current, last);
+				if ((tempRoute.getOwner() != null) && tempRoute.getOwner().equals(this))
+					continue;
+				if (hasCards(tempRoute) && (bestRoute == null || bestRoute.getCost() < tempRoute.getCost())) {
+					decision = 1;
+					bestRoute = tempRoute;
+					r = tempRoute;
+				}
+			}
+		}
+
+		DestinationNode tempNode = bestTicketRoute.get(bestTicketRoute.size() - 1);
+
+		if (decision == 2) {
+
+			TrainCardColor mostNeededColor = null;
+			ArrayList<TrainCard> faceUpCards = getFaceUpCards();
+
+
+			for (int i = 0; i < faceUpCards.size(); i++) {
+
+				if (faceUpCards.get(i).getColor().equals(TrainCardColor.rainbow)) {
+					drawTrainCard(i + 1);
+					return;
+				}
+			}
+			
+			for (int j = 0; j < 3; j++) {
+				int needValue = -1;
+				for (TrainCardColor c : tempNode.cardsMissing.keySet()) {
+					if (tempNode.cardsMissing.get(c) > needValue) {
+						needValue = tempNode.cardsMissing.get(c);
+						mostNeededColor = c;
+					}
+				}
+				if (needValue == 0)
+					break;
+				tempNode.cardsMissing.put(mostNeededColor, -1);
+
+				for (int i = 1; i < faceUpCards.size(); i++) {
+
+					if (faceUpCards.get(i).getColor().equals(mostNeededColor)) {
+						drawTrainCard(i + 1);
+						return;
+					}
+				}
+
+				if (needValue == -1) {
+					drawTrainCard(0);
+					return;
+				}
+				tempNode.cardsMissing.remove(mostNeededColor);
+			}
+		}
+
+		switch (decision) {
+		case 1:
+			TrainCardColor c = r.getColor();
+
+			if (r.getColor().equals(TrainCardColor.rainbow)) {
+				c = getMaxCardColor();
+			}
+
+			claimRoute(r, c);
+			return;
+		case 2:
+			int card = 0; // draws directly from deck
+			drawTrainCard(card);
+			return;
+		case 3:
+			drawDestinationTickets();
+			return;
+		}
+		super.drawTrainCard(0);
+	}
+
+	private TrainCardColor getMaxCardColor() {
+		int max = -1;
+		TrainCardColor maxC = null;
+		for (TrainCardColor c : cardHash.keySet()) {
+			if (cardHash.get(c) > max && !c.equals(TrainCardColor.rainbow)) {
+				max = cardHash.get(c);
+				maxC = c;
+			}
+		}
+		return maxC;
+	}
+
+	private void initializeDestNodes() {
+		for (Destination d : Destination.values()) {
+			DestinationNode tempNode = new DestinationNode(d);
+			destinationList.put(d, tempNode);
+		}
+	}
+
+	private ArrayList<DestinationNode> getMultiRoute(DestinationNode d1, DestinationNode d2) {
+
+		PriorityQueue<DestinationNode> openList = new PriorityQueue<DestinationNode>(1, new DestinationNodeComparator());
+		ArrayList<DestinationNode> closedList = new ArrayList<DestinationNode>();
+
+		d1.initializeCardsLeft(cardHash);
+		openList.add(d1);
+		DestinationNode currentNode = null;
+
+		while (!openList.isEmpty()) {
+
+			currentNode = openList.remove();
+			closedList.add(currentNode);
+
+
+			// goal case
+			if (currentNode.equals(d2)) {
+				ArrayList<DestinationNode> path = new ArrayList<DestinationNode>();
+				path.add(0, currentNode);
+				while (!currentNode.equals(d1)) {
+					path.add(0, currentNode.parent);
+					currentNode = currentNode.parent;
+				}
+				return path;
+			}
+
+			// for each route in the current node's "neighbors" arraylist
+			for (Route r : currentNode.neighbors) {
+
+				// find which side is not the current node, make that the
+				// neighbor
+				DestinationNode neighbor;
+				if (currentNode.dest.equals(r.getDest1()))
+					neighbor = destinationList.get(r.getDest2());
+				else
+					neighbor = destinationList.get(r.getDest1());
+
+				// set the cardsleft of the neighbor to the current node's
+				// cardsLeft
+				neighbor.cardsLeft = new HashMap<TrainCardColor, Integer>(currentNode.cardsLeft);
+
+				// don't do the same thing with cardsMissing
+				// neighbor.cardsMissing = new HashMap<TrainCardColor,
+				// Integer>(currentNode.cardsMissing);
+
+				TrainCardColor color = r.getColor();
+				int changeInCardsLeft = 0;
+				int changeInCardsMissing = 0;
+
+				// the weight, if unclaimed and not gray, is the number of
+				// required trains times two
+				double routeWeight = r.getCost() * 2;
+
+				// the cost is the number of required trains
+				int routeCost = r.getCost();
+
+				// nSameColorCards is the number of cards the player has that
+				// correspond with route color, not including rainbow cards
+				int nSameColorCards = neighbor.cardsLeft.get(r.getColor());
+				// if you're the owner of a route, set its weight to zero right
+				// away. the player should prefer these
+				if (r.getOwner() != null && r.getOwner().equals(this)) {
+					routeWeight = 0;
+				}
+
+				// if the card is gray:
+				else if (r.getColor().equals(TrainCardColor.rainbow)) {
+
+					// use getMaxCardColor to find the color that you have the
+					// most cards for
+					// you'll be using this to fund the gray route (max
+					// likelihood of being able to do it)
+					TrainCardColor maxCardColor = getMaxCardColor();
+					color = maxCardColor;
+
+					// nGrayCards is the number of cards you have of your modal
+					// color
+					int nGrayCards = neighbor.cardsLeft.get(maxCardColor);
+
+					// if the cost exceeds the number of cards you have
+					if (routeCost >= nGrayCards) {
+						// subtract the graycards from the weight, which is now
+						// (cost + (cost - usableCards))
+						routeWeight -= nGrayCards;
+
+						// set that card color's amount equal to 0 (you used
+						// them all here)
+						neighbor.cardsLeft.put(maxCardColor, 0);
+						changeInCardsMissing += routeCost - nGrayCards;
+
+					} else {
+						// if you have more cards then necessary, subtract the
+						// cost from the color's total count
+						neighbor.cardsLeft.put(maxCardColor, neighbor.cardsLeft.get(maxCardColor) - (routeCost));
+						changeInCardsMissing = 0;
+
+						// subtract the routeCost from the routeWeight (this
+						// will return you the routeCost, or routeWeight/2)
+						routeWeight -= routeCost;
+					}
+
+					// because it's a gray route, you want to claim it faster,
+					// and it's easier on you to claim, so prioritize it by
+					// reducing the weight
+					routeWeight *= GRAY_WEIGHT;
+
+					// same thing, but for non-grays, which means it just
+					// utilizes the given route color
+					// if the routecost is more than you can afford w/o rainbows
+				} else if (routeCost >= nSameColorCards) {
+					// subtract the number of available cards of that color from
+					// the weight, which will be (cost + (cost - usableCards))
+					routeWeight -= nSameColorCards;
+
+					// since you've used all the cards of that color, set that
+					// card color quantity equal to zero
+					neighbor.cardsLeft.put(r.getColor(), 0);
+
+					changeInCardsMissing += routeCost - nSameColorCards;
+					// because the cost is greater than the number of available
+					// cards, add the number of missing cards to cardsMissing
+					// for that future node
+
+				} else {
+
+					// if you have all the cards you need for that one, you can
+					// safely set the missingCards value to zero
+					changeInCardsMissing = 0;
+					neighbor.cardsLeft.put(r.getColor(), neighbor.cardsLeft.get(r.getColor()) - (routeCost));
+					routeWeight -= routeCost;
+				}
+
+				if (!closedList.contains(neighbor)) {
+					if (openList.contains(neighbor)) {
+						if (neighbor.weight > currentNode.weight + routeWeight) {
+							neighbor.weight = currentNode.weight + routeWeight;
+
+							neighbor.cardsMissing = new HashMap<TrainCardColor, Integer>(currentNode.cardsMissing);
+							neighbor.cardsMissing.put(color, neighbor.cardsMissing.get(color) + changeInCardsMissing);
+
+							if (routeWeight > 0.0001)
+								neighbor.cost = currentNode.cost + r.getCost();
+							else
+								neighbor.cost = currentNode.cost;
+
+							neighbor.parent = currentNode;
+							openList.remove(neighbor);
+							openList.add(neighbor);
+						} else
+							continue;
+					} else {
+						neighbor.weight = currentNode.weight + routeWeight;
+						neighbor.parent = currentNode;
+
+						if (routeWeight > 0.0001)
+							neighbor.cost = currentNode.cost + r.getCost();
+						else
+							neighbor.cost = currentNode.cost;
+
+						// ADDED
+						neighbor.cardsMissing = new HashMap<TrainCardColor, Integer>(currentNode.cardsMissing);
+						neighbor.cardsMissing.put(color, neighbor.cardsMissing.get(color) + changeInCardsMissing);
+
+						openList.add(neighbor);
+					}
+				}
+			}
+
+		}
+
+		return null;
+	}
+
+	private void initializeHand() {
+		blackCards = whiteCards = redCards = blueCards = purpleCards = greenCards = yellowCards = orangeCards = rainbowCards = 0;
+		for (TrainCard t : hand) {
+			if (t.getColor() == TrainCardColor.black)
+				blackCards++;
+			else if (t.getColor() == TrainCardColor.white)
+				whiteCards++;
+			else if (t.getColor() == TrainCardColor.red)
+				redCards++;
+			else if (t.getColor() == TrainCardColor.blue)
+				blueCards++;
+			else if (t.getColor() == TrainCardColor.purple)
+				purpleCards++;
+			else if (t.getColor() == TrainCardColor.green)
+				greenCards++;
+			else if (t.getColor() == TrainCardColor.yellow)
+				yellowCards++;
+			else if (t.getColor() == TrainCardColor.orange)
+				orangeCards++;
+			else if (t.getColor() == TrainCardColor.rainbow)
+				rainbowCards++;
+		}
+		cardHash.put(TrainCardColor.black, blackCards);
+		cardHash.put(TrainCardColor.white, whiteCards);
+		cardHash.put(TrainCardColor.red, redCards);
+		cardHash.put(TrainCardColor.blue, blueCards);
+		cardHash.put(TrainCardColor.purple, purpleCards);
+		cardHash.put(TrainCardColor.green, greenCards);
+		cardHash.put(TrainCardColor.yellow, yellowCards);
+		cardHash.put(TrainCardColor.orange, orangeCards);
+		cardHash.put(TrainCardColor.rainbow, rainbowCards);
+	}
+
+	private boolean hasCards(Route r) {
+		TrainCardColor color = r.getColor();
+		int cost = r.getCost();
+		if (color == TrainCardColor.rainbow) {
+			color = getMaxCardColor();
+		}
+
+		if (cardHash.get(color) + cardHash.get(TrainCardColor.rainbow) >= cost) {
+			return true;
+		} else
+			return false;
+	}
+
+	public Route getAdjRoute(DestinationNode d1, DestinationNode d2) {
+		ArrayList<Route> adjRoutes = new ArrayList<Route>();
+		for (Route r : routes) {
+			if ((r.getDest1().equals(d1.dest) || r.getDest2().equals(d1.dest)) && (r.getDest1().equals(d2.dest) || r.getDest2().equals(d2.dest))) {
+				adjRoutes.add(r);
+			}
+		}
+		Route bestAdjRoute = null;
+		int numCardsForRoute = -1;
+		for (Route r : adjRoutes) {
+			if (cardHash.get(r.getColor()) > numCardsForRoute) {
+				numCardsForRoute = cardHash.get(r.getColor());
+				bestAdjRoute = r;
+			}
+		}
+		return bestAdjRoute;
+	}
+}
+
+class DestinationNode {
+	public DestinationNode parent;
+	public Destination dest;
+	public double weight;
+	public int cost;
+	public ArrayList<Route> neighbors;
+	public HashMap<TrainCardColor, Integer> cardsLeft = new HashMap<TrainCardColor, Integer>();
+	public HashMap<TrainCardColor, Integer> cardsMissing = new HashMap<TrainCardColor, Integer>();
+
+	public DestinationNode(Destination d) {
+		parent = null;
+		dest = d;
+		weight = 0;
+		cost = 0;
+		for (TrainCardColor c : TrainCardColor.values()) {
+			cardsMissing.put(c, 0);
+		}
+	}
+
+	public void getNeighbors(ArrayList<Route> routes) {
+		ArrayList<Route> neighbors = new ArrayList<Route>();
+		for (Route r : routes) {
+			if (this.dest.equals(r.getDest1()) || this.dest.equals(r.getDest2())) {
+				neighbors.add(r);
+			}
+		}
+		this.neighbors = neighbors;
+	}
+
+	public void initializeCardsLeft(HashMap<TrainCardColor, Integer> cardHash) {
+		this.cardsLeft = new HashMap<TrainCardColor, Integer>(cardHash);
+	}
+
+	public void initializeCardsMissing() {
+		for (TrainCardColor c : TrainCardColor.values()) {
+			this.cardsMissing.put(c, 0);
+		}
+	}
+}
+
+class DestinationNodeComparator implements Comparator<DestinationNode> {
+
+	@Override
+	public int compare(DestinationNode o1, DestinationNode o2) {
+		return (int) ((o1.weight - o2.weight) * 100);
+	}
+
+}

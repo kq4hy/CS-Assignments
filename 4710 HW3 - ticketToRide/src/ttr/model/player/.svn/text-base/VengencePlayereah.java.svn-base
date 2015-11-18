@@ -1,0 +1,414 @@
+package ttr.model.player;
+
+import java.util.ArrayList;
+
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCardColor;
+
+public class VengencePlayereah extends Player{
+	public ArrayList<Route> enemiesRoutes;
+	Route goalRoute;
+	public VengencePlayereah(String name){
+		super(name);
+		enemiesRoutes = new ArrayList<Route>();
+	}
+	public VengencePlayereah(){
+		super("VengencePlayereah");
+		enemiesRoutes = new ArrayList<Route>();
+	}
+	public void makeMove(){
+		ArrayList<Route> allRoutes = new ArrayList<Route>(Routes.getInstance().getAllRoutes());
+		boolean enemyPurchase = false;
+		int purchaseLoc = -1;
+		for(int k = 0; k< allRoutes.size(); k++){
+			if(!(allRoutes.get(k).getOwner() == null)){
+				if(!allRoutes.get(k).getOwner().equals(this)){
+					if(!enemiesRoutes.contains(allRoutes.get(k))){
+						enemiesRoutes.add(allRoutes.get(k));
+						enemyPurchase = true;
+						purchaseLoc = k;
+					}
+				}
+			}
+		}
+		if(enemyPurchase){
+			ArrayList<Route> possible = new ArrayList<Route>();
+				/*boolean connect1 = allRoutes.get(purchaseLoc).getDest1().equals(enemiesRoutes.get(i).getDest1());
+				boolean connect3 = allRoutes.get(purchaseLoc).getDest1().equals(enemiesRoutes.get(i).getDest2());
+				boolean connect2 = allRoutes.get(purchaseLoc).getDest2().equals(enemiesRoutes.get(i).getDest2());
+				boolean connect4 = allRoutes.get(purchaseLoc).getDest2().equals(enemiesRoutes.get(i).getDest1());
+				boolean nope = connect1 && connect2;
+				boolean connecting1 = connect1 || connect3;
+				boolean connecting2 = connect2 || connect4;
+				if(connecting2 && !connecting1){*/
+			for(int k = 0; k < allRoutes.size(); k++){
+				if(allRoutes.get(k).getDest1().equals(allRoutes.get(purchaseLoc).getDest1())){
+					possible.add(allRoutes.get(k));
+				}
+				else if(allRoutes.get(k).getDest2().equals(allRoutes.get(purchaseLoc).getDest1())){
+					possible.add(allRoutes.get(k));
+				}
+				else if(allRoutes.get(k).getDest2().equals(allRoutes.get(purchaseLoc).getDest2())){
+					possible.add(allRoutes.get(k));
+				}
+				else if(allRoutes.get(k).getDest1().equals(allRoutes.get(purchaseLoc).getDest2())){
+					possible.add(allRoutes.get(k));
+				}
+			}
+					int bestCost = -1;
+					int bestLoc = -1;
+					for(int k = 0; k < possible.size(); k++){
+						if(possible.get(k).getCost() > bestCost && possible.get(k).getOwner() == null && possible.get(k).getCost() <= this.getNumTrainPieces() && !Routes.getInstance().isRouteClaimed(possible.get(k))){
+							bestLoc = k;
+							bestCost = possible.get(k).getCost();
+						}
+					}
+					goalRoute = possible.get(bestLoc);
+					System.out.println(goalRoute.getDest1());
+					System.out.println(goalRoute.getDest2());
+				/*}
+				else if(connecting1 && !connecting2){
+					ArrayList<Route> possible = new ArrayList<Route>();
+					for(int k = 0; k < allRoutes.size(); k++){
+						if(allRoutes.get(k).getDest1().equals(allRoutes.get(purchaseLoc).getDest2())){
+							possible.add(allRoutes.get(k));
+						}
+						else if(allRoutes.get(k).getDest2().equals(allRoutes.get(purchaseLoc).getDest2())){
+							possible.add(allRoutes.get(k));
+						}
+					}
+					int bestCost = -1;
+					int bestLoc = -1;
+					for(int k = 0; k < possible.size(); k++){
+						if(possible.get(k).getCost() > bestCost && possible.get(k).getOwner() == null && !Routes.getInstance().isRouteClaimed(possible.get(k))){
+							bestLoc = k;
+						}
+					}
+					goalRoute = possible.get(bestLoc);
+					System.out.println(goalRoute.getDest1());
+				}
+				else if(connecting1 && connecting2){
+					System.out.println("why");
+					goalRoute = null;
+				}
+				*/
+		}
+		if(goalRoute == null || goalRoute.getOwner() == this){
+			if(this.getHand().size() < 30){
+				for(int i = 1; i < 5; i++){
+					if((this.getFaceUpCards().get(i).getColor()) == TrainCardColor.rainbow){
+						this.drawTrainCard(i+1);
+						return;
+					}
+				}
+				int[] handAmount = new int[8];
+				for(int i = 0; i < this.getHand().size(); i++){
+					if(this.getHand().get(i).getColor() == TrainCardColor.black){
+						handAmount[0] = handAmount[0]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.blue){
+						handAmount[1] = handAmount[1]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.green){
+						handAmount[2] = handAmount[2]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.orange){
+						handAmount[3] = handAmount[3]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.purple){
+						handAmount[4] = handAmount[4]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.red){
+						handAmount[5] = handAmount[5]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.white){
+						handAmount[6] = handAmount[6]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.yellow){
+						handAmount[7] = handAmount[7]+1;
+					}
+				}
+				int color = 0;
+				TrainCardColor test = TrainCardColor.black;
+				for(int i = 0; i < 8; i++){
+					if(handAmount[color] < handAmount[i]){
+						color=i;
+						if(i == 1){
+							test = TrainCardColor.blue;
+						}
+						if(i == 2){
+							test = TrainCardColor.green;
+						}
+						if(i == 3){
+							test = TrainCardColor.orange;
+						}
+						if(i == 4){
+							test = TrainCardColor.purple;
+						}
+						if(i == 5){
+							test = TrainCardColor.red;
+						}
+						if(i == 6){
+							test = TrainCardColor.white;
+						}
+						if(i == 7){
+							test = TrainCardColor.yellow;
+						}
+					}
+				}
+				for(int i = 0; i < this.getFaceUpCards().size(); i++){
+					if(this.getFaceUpCards().get(i).getColor() == test){
+						this.drawTrainCard(i);
+						return;
+					}
+				}
+				this.drawTrainCard(0);
+				return;
+			}
+			else{
+				int[] handAmount = new int[9];
+				for(int i = 0; i < this.getHand().size(); i++){
+					if(this.getHand().get(i).getColor() == TrainCardColor.black){
+						handAmount[0] = handAmount[0]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.blue){
+						handAmount[1] = handAmount[1]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.green){
+						handAmount[2] = handAmount[2]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.orange){
+						handAmount[3] = handAmount[3]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.purple){
+						handAmount[4] = handAmount[4]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.red){
+						handAmount[5] = handAmount[5]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.yellow){
+						handAmount[6] = handAmount[6]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.white){
+						handAmount[7] = handAmount[7]+1;
+					}
+					else if(this.getHand().get(i).getColor() == TrainCardColor.rainbow){
+						handAmount[8] = handAmount[8]+1;
+					}
+				}
+				int maxCost = -1;
+				int routePos = -1;
+				int colorIdent = 0;
+				boolean buyable = false;
+				for(int i = 0; i < Routes.getInstance().getAllRoutes().size(); i++){
+					if(Routes.getInstance().getAllRoutes().get(i).getOwner() == null || !Routes.getInstance().isRouteClaimed(Routes.getInstance().getAllRoutes().get(i))){
+						if(maxCost <= Routes.getInstance().getAllRoutes().get(i).getPoints()){
+							if(Routes.getInstance().getAllRoutes().get(i).getColor() == TrainCardColor.black){
+								colorIdent = 0;
+							}
+							if(Routes.getInstance().getAllRoutes().get(i).getColor() == TrainCardColor.blue){
+								colorIdent = 1;
+							}
+							if(Routes.getInstance().getAllRoutes().get(i).getColor() == TrainCardColor.green){
+								colorIdent = 2;
+							}
+							if(Routes.getInstance().getAllRoutes().get(i).getColor() == TrainCardColor.orange){
+								colorIdent = 3;
+							}
+							if(Routes.getInstance().getAllRoutes().get(i).getColor() == TrainCardColor.purple){
+								colorIdent = 4;
+							}
+							if(Routes.getInstance().getAllRoutes().get(i).getColor() == TrainCardColor.red){
+								colorIdent = 5;
+							}
+							if(Routes.getInstance().getAllRoutes().get(i).getColor() == TrainCardColor.yellow){
+								colorIdent = 6;
+							}
+							if(Routes.getInstance().getAllRoutes().get(i).getColor() == TrainCardColor.white){
+								colorIdent = 7;
+							}
+							if(Routes.getInstance().getAllRoutes().get(i).getCost() <= (handAmount[colorIdent]+handAmount[8]) && Routes.getInstance().getAllRoutes().get(i).getCost() <= this.getNumTrainPieces()){
+								maxCost = Routes.getInstance().getAllRoutes().get(i).getPoints();
+								routePos = i;
+								buyable = true;
+							}
+							else if(Routes.getInstance().getAllRoutes().get(i).getCost() <= (handAmount [8]) && Routes.getInstance().getAllRoutes().get(i).getCost() <= this.getNumTrainPieces()){
+								maxCost = Routes.getInstance().getAllRoutes().get(i).getPoints();
+								routePos = i;
+								buyable = true;
+							}
+						}
+					}
+				}
+				if(Routes.getInstance().getAllRoutes().get(routePos).getColor() == TrainCardColor.black){
+					colorIdent = 0;
+				}
+				if(Routes.getInstance().getAllRoutes().get(routePos).getColor() == TrainCardColor.blue){
+					colorIdent = 1;
+				}
+				if(Routes.getInstance().getAllRoutes().get(routePos).getColor() == TrainCardColor.green){
+					colorIdent = 2;
+				}
+				if(Routes.getInstance().getAllRoutes().get(routePos).getColor() == TrainCardColor.orange){
+					colorIdent = 3;
+				}
+				if(Routes.getInstance().getAllRoutes().get(routePos).getColor() == TrainCardColor.purple){
+					colorIdent = 4;
+				}
+				if(Routes.getInstance().getAllRoutes().get(routePos).getColor() == TrainCardColor.red){
+					colorIdent = 5;
+				}
+				if(Routes.getInstance().getAllRoutes().get(routePos).getColor() == TrainCardColor.yellow){
+					colorIdent = 6;
+				}
+				if(Routes.getInstance().getAllRoutes().get(routePos).getColor() == TrainCardColor.white){
+					colorIdent = 7;
+				}
+				if(Routes.getInstance().getAllRoutes().get(routePos).getCost() <= (handAmount[colorIdent]+handAmount[8])){
+					this.claimRoute(Routes.getInstance().getAllRoutes().get(routePos), Routes.getInstance().getAllRoutes().get(routePos).getColor());
+					return;
+				}
+				else if(Routes.getInstance().getAllRoutes().get(routePos).getCost() <= (handAmount [8])){
+					this.claimRoute(Routes.getInstance().getAllRoutes().get(routePos), TrainCardColor.rainbow);
+					return;
+				}
+				else{
+					this.drawTrainCard(0);
+				}
+			}
+		}
+		else{
+			int[] handAmount = new int[9];
+			for(int i = 0; i < this.getHand().size(); i++){
+				if(this.getHand().get(i).getColor() == TrainCardColor.black){
+					handAmount[0] = handAmount[0]+1;
+				}
+				else if(this.getHand().get(i).getColor() == TrainCardColor.blue){
+					handAmount[1] = handAmount[1]+1;
+				}
+				else if(this.getHand().get(i).getColor() == TrainCardColor.green){
+					handAmount[2] = handAmount[2]+1;
+				}
+				else if(this.getHand().get(i).getColor() == TrainCardColor.orange){
+					handAmount[3] = handAmount[3]+1;
+				}
+				else if(this.getHand().get(i).getColor() == TrainCardColor.purple){
+					handAmount[4] = handAmount[4]+1;
+				}
+				else if(this.getHand().get(i).getColor() == TrainCardColor.red){
+					handAmount[5] = handAmount[5]+1;
+				}
+				else if(this.getHand().get(i).getColor() == TrainCardColor.white){
+					handAmount[6] = handAmount[6]+1;
+				}
+				else if(this.getHand().get(i).getColor() == TrainCardColor.yellow){
+					handAmount[7] = handAmount[7]+1;
+				}
+				else if(this.getHand().get(i).getColor() == TrainCardColor.rainbow){
+					handAmount[8] = handAmount[8]+1;
+				}
+			}
+			int colorIdent = 0;
+			if(goalRoute.getColor() == TrainCardColor.black){
+				colorIdent = 0;
+			}
+			if(goalRoute.getColor() == TrainCardColor.blue){
+				colorIdent = 1;
+			}
+			if(goalRoute.getColor() == TrainCardColor.green){
+				colorIdent = 2;
+			}
+			if(goalRoute.getColor() == TrainCardColor.orange){
+				colorIdent = 3;
+			}
+			if(goalRoute.getColor() == TrainCardColor.purple){
+				colorIdent = 4;
+			}
+			if(goalRoute.getColor() == TrainCardColor.red){
+				colorIdent = 5;
+			}
+			if(goalRoute.getColor() == TrainCardColor.yellow){
+				colorIdent = 6;
+			}
+			if(goalRoute.getColor() == TrainCardColor.white){
+				colorIdent = 7;
+			}
+			if(goalRoute.getColor() == TrainCardColor.rainbow){
+				colorIdent = 8;
+			}
+			if(colorIdent == 8){
+				int biggest = -1;
+				int bigColor = -1;
+				TrainCardColor test = TrainCardColor.black;
+				for(int w = 0; w < 8; w++){
+					if(biggest < handAmount[w]){
+						biggest = handAmount[w];
+						bigColor = w;
+					}
+				}
+				if(bigColor == 0){
+					test = TrainCardColor.black;
+				}
+				if(bigColor == 1){
+					test = TrainCardColor.blue;
+				}
+				if(bigColor == 2){
+					test = TrainCardColor.green;
+				}
+				if(bigColor == 3){
+					test = TrainCardColor.orange;
+				}
+				if(bigColor == 4){
+					test = TrainCardColor.purple;
+				}
+				if(bigColor == 5){
+					test = TrainCardColor.red;
+				}
+				if(bigColor == 6){
+					test = TrainCardColor.yellow;
+				}
+				if(bigColor == 7){
+					test = TrainCardColor.white;
+				}
+				if(bigColor == 8){
+					test = TrainCardColor.rainbow;
+				}
+				if(goalRoute.getCost() <= (handAmount[bigColor]+ handAmount[8])){
+					this.claimRoute(goalRoute, test);
+					goalRoute = null;
+					return;
+				}
+			}
+			else if((handAmount[colorIdent]+handAmount[8]) >= goalRoute.getCost()){
+				//System.out.println("test");
+				this.claimRoute(goalRoute, goalRoute.getColor());
+				goalRoute = null;
+				return;
+			}
+			else if(handAmount[8] >= goalRoute.getCost()){
+				this.claimRoute(goalRoute, TrainCardColor.rainbow);
+				goalRoute = null;
+				return;
+			}
+			else{
+				for(int i = 0; i < 5; i++){
+					if((this.getFaceUpCards().get(i).getColor()) == TrainCardColor.rainbow){
+						this.drawTrainCard(i+1);
+						return;
+					}
+				}
+				for(int i = 0; i < 5; i++){
+					if(this.getFaceUpCards().get(i).getColor() == goalRoute.getColor()){
+						this.drawTrainCard(i+1);
+						return;
+					}
+				}
+				this.drawTrainCard(0);
+				return;
+			}
+		}
+		this.drawTrainCard(0);
+		return;
+	}
+}

@@ -1,0 +1,319 @@
+package ttr.model.player;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Map.Entry;
+
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+/**
+Tries to achieve the destinations 
+ * */
+public class grelen_grace_and_helen_s_project_Player extends Player{
+
+	/**
+	 * Need to have this constructor so the player has a name, you can use no parameters and pass the name of your player
+	 * to the super constructor, or just take in the name as a parameter. Both options are shown here.
+	 * */
+	public grelen_grace_and_helen_s_project_Player(String name) {
+		super(name);
+	}
+	/**
+	 * MUST override the makeMove() method and implement it.
+	 * */
+	@Override
+	public void makeMove(){
+		//first you want to pick up any random cards that show up
+		/*ArrayList <TrainCard> faces = super.getFaceUpCards();
+		for(int x = 0; x < faces.size(); x++)
+		{
+			if (faces.get(x).getColor() == TrainCardColor.rainbow)
+			{	super.drawTrainCard(x + 1);			 
+			}
+		}*/
+		ArrayList<Route> routes = Routes.getInstance().getAllRoutes();
+		ArrayList<DestinationTicket> tickets = super.getDestinationTickets();
+		if (tickets.size() == 0) {
+			if (super.getNumTrainPieces() > 30) {
+				super.drawDestinationTickets();
+			}
+			else {
+				makeRichMove();
+			}			
+		}
+		else {
+			//System.out.println("to: " + tickets.get(0).getFrom() + " from: " + tickets.get(0).getTo());
+			ArrayList<Route> rarray = makeRoute(tickets.get(0).getFrom(), tickets.get(0).getTo());
+			//System.out.println(rarray); 
+			for(int i = 0; i < rarray.size(); i++)
+			{
+				TrainCardColor c = rarray.get(i).getColor();
+				if (c != TrainCardColor.rainbow)
+				{
+					int numCol = 0; 
+					for (int j = 0; j < super.getHand().size(); j++) {
+						if (super.getHand().get(j).getColor() == c || super.getHand().get(j).getColor() == TrainCardColor.rainbow) {
+							numCol++;
+						}
+					}
+					if (numCol >= rarray.get(i).getCost()) {
+						if (super.getNumTrainPieces() >= rarray.get(i).getCost()) {
+							if (rarray.get(i).getOwner() == null) {
+								super.claimRoute(rarray.get(i), c);
+							}
+							else if (rarray.get(i).getOwner() == this) {
+								continue;
+							}
+						}
+					}
+				}
+				else {
+					TrainCardColor col = null;
+					int maxx = 0;
+					//find the color w/ max # of cards in our hand
+					for (int k = 0; k < super.getHand().size(); k++) {
+						if (super.getNumTrainCardsByColor(super.getHand().get(k).getColor()) > maxx) {
+							maxx = super.getNumTrainCardsByColor(super.getHand().get(k).getColor());
+							col = super.getHand().get(k).getColor();
+						}
+					}
+					if (maxx >= rarray.get(i).getCost()) {
+						if (super.getNumTrainPieces() >= rarray.get(i).getCost()) {
+							if (rarray.get(i).getOwner() == null) {
+								super.claimRoute(rarray.get(i), col);
+							}
+							else if (rarray.get(i).getOwner() == this) {
+								continue;
+							}
+						}
+					}
+				}
+			}
+			for (int i = 0; i < super.getFaceUpCards().size(); i++) {
+				if (super.getFaceUpCards().get(i).getColor() == rarray.get(0).getColor()) {
+					drawTrainCard(i+1);
+				}
+				else if (super.getFaceUpCards().get(i).getColor() == TrainCardColor.rainbow) {
+					drawTrainCard(i+1);
+				}
+			}
+		}
+		drawTrainCard(0);
+
+	}
+	/** 
+	 * uses A* or something like that to figure out some route we can use 
+	 * @param a first destination
+	 * @param b second destination 
+	 * @return an array list with the route that you can take 
+	 */
+	private ArrayList<Route> makeRoute(Destination a, Destination b)
+	{	
+		/* If same, just return false */
+		
+		/* Open and Closed lists (breadth first search) */
+		HashMap<Destination, Integer> openList = new HashMap<Destination, Integer>();
+		HashMap<Destination, Integer> closedList = new HashMap<Destination, Integer>();
+		HashMap<Destination, Destination> nonvisited = new HashMap<Destination, Destination>();
+		HashMap<Destination, Destination> visited = new HashMap<Destination, Destination>();
+		ArrayList<Route> f = new ArrayList<Route>();
+		
+		openList.put(a, 0);
+		//Destination before = a; 
+		while(openList.size() > 0){
+			
+			/* Pop something off the open list, if destination then return true */
+			Destination next = null;
+			int minCost = 9999;
+			for(Destination key : openList.keySet())
+			{	
+				if(openList.get(key) < minCost)
+				{
+					next = key;
+					minCost = openList.get(key);
+				}
+			
+			}
+			
+			/* Take it off the open list and put on the closed list */
+			openList.remove(next);
+			closedList.put(next, minCost);
+			visited.put(next, nonvisited.get(next)); 
+			
+		//	System.out.println("next: " + next + " before: " + before); 
+			/* If this is the destination, then return!!!! */
+			if(next == b) break; 
+			
+			/* Get all the neighbors of the next city that aren't on open or closed lists already */
+			for(Destination neighbor : Routes.getInstance().getNeighbors(next)){
+				if(closedList.containsKey(neighbor)) continue;
+				if(routeowner(next, neighbor) == false) continue; 
+				
+				/* get route between next and neighbor and see if better than neighbor's value */
+	     		ArrayList<Route> routesToNeighbor = Routes.getInstance().getRoutes(next, neighbor);
+				for(Route routeToNeighbor : routesToNeighbor){
+					int newCost = closedList.get(next) + routeToNeighbor.getCost();
+					
+					if(openList.containsKey(neighbor)){	
+						if(newCost < openList.get(neighbor)){
+							nonvisited.put(neighbor, next);
+							openList.put(neighbor, newCost);
+						}
+					}
+					else{
+						nonvisited.put(neighbor, next);
+						openList.put(neighbor, newCost);
+					}
+				}
+			}
+		}
+		
+		Destination current = b; 
+		while (current != a)
+		{
+		ArrayList<Route> temproutes = Routes.getInstance().getRoutes(current, visited.get(current));
+		for (int x = 0; x < temproutes.size(); x++)
+				{f.add(temproutes.get(x));}
+		//System.out.println("hello " + temproutes.get(0));
+		current = visited.get(current);
+		}
+		
+		return f; 
+
+	}
+	/**
+	 * returns true if u r da owner or if there is no owner 
+	 * @param R 
+	 * @return
+	 */
+	private boolean routeowner(Destination a, Destination b)
+	{
+		ArrayList<Route> r = Routes.getInstance().getRoutes(a, b);
+		for(int x = 0; x < r.size(); x++)
+		{
+		if(Routes.getInstance().isRouteClaimed(r.get(x))== true)
+		{
+			ArrayList<Route> temp = super.getPlayerClaimedRoutes();
+			for(int y = 0; y < temp.size(); y++)
+			{
+				if (temp.get(y) == r.get(x))
+					return true;
+			}
+		}
+		else if(Routes.getInstance().isRouteClaimed(r.get(x))== false)
+			return true; 
+		}
+		return false; 
+	}
+	
+	public void makeRichMove() {
+		Routes r = Routes.getInstance();
+		ArrayList<Route> routes = r.getAllRoutes();
+		HashMap<Route,TrainCardColor> r_c = new HashMap<Route,TrainCardColor>();
+		HashMap<Route,Integer> r_p = new HashMap<Route,Integer>();
+		for (int i = 0; i < routes.size(); i++) {
+			if (routes.get(i).getOwner() == null) {
+				Destination d1 = routes.get(i).getDest1();
+				Destination d2 = routes.get(i).getDest2();
+				for (int j = 0; j < routes.size(); j++) {
+					if (routes.get(j).getDest1() == d1 && routes.get(j).getDest2() == d2 && routes.get(j).getOwner() != null) {
+						//do nothing
+					}
+					else if (routes.get(j).getDest1() == d2 && routes.get(j).getDest2() == d1 && routes.get(j).getOwner() != null) {
+						//also do nothing
+					}
+					else {
+						r_c.put(routes.get(i), routes.get(i).getColor());
+						r_p.put(routes.get(i), routes.get(i).getCost());
+					}
+				}
+				
+			}
+		}
+		//r_c has routes and their corresponding colors
+		//r_p has routes and their costs (prices)
+		int mx = 0;
+		Route big = null;
+		for (Entry<Route,Integer> e : r_p.entrySet()) {
+			if (e.getValue() > mx) {
+				mx = e.getValue();
+				big = e.getKey();
+			}
+		}
+		if (super.getNumTrainPieces() < mx) {
+			mx = super.getNumTrainPieces();
+			for (Entry<Route,Integer> e : r_p.entrySet()) {
+				if (e.getValue() == mx) {
+					big = e.getKey();
+				}
+			}
+		}
+		//we just found the largest cost
+		//look at all of that cost or one below it
+		for (Entry<Route,Integer> e : r_p.entrySet()) {
+			if (e.getValue() == mx /*|| e.getValue() == mx-1*/) {
+				Route max = e.getKey();
+				//check to see if we might have enough cards to buy it
+				if (super.getHand().size() >= mx) {
+					//max is the longest route. if more than one is at that price, the gray one is considered better (if theres gray)
+					//if our hand contains enough cards to buy the longest route (assuming route is not gray)
+					if (max.getColor() != TrainCardColor.rainbow) {
+						int crds = 0;
+						for (int i = 0; i < super.getHand().size(); i++) {
+							if (super.getHand().get(i).getColor() == max.getColor()) {
+								crds++;
+							}
+							else if (super.getHand().get(i).getColor() == TrainCardColor.rainbow) {
+								crds++;
+							}
+						}
+						//we just checked for total of route color + rainbow cards
+						if (crds >= r_p.get(max)) {
+							if (max.getOwner() == null) {
+								super.claimRoute(max,max.getColor());
+							}
+						}
+					}
+					//now if the route IS gray
+					else {
+						TrainCardColor col = null;
+						int maxx = 0;
+						//find the color w/ max # of cards in our hand
+						for (int i = 0; i < super.getHand().size(); i++) {
+							if (super.getNumTrainCardsByColor(super.getHand().get(i).getColor()) > maxx) {
+								maxx = super.getNumTrainCardsByColor(super.getHand().get(i).getColor());
+								col = super.getHand().get(i).getColor();
+							}
+						}
+						if (maxx >= mx) {
+							if (max.getOwner() == null) {
+								super.claimRoute(max, col);
+							}
+						}
+					}
+				}
+			}
+		}
+		//if we need more cards to buy the longest route
+		for (int i = 0; i < super.getFaceUpCards().size(); i++) {
+			//if a card of the color of longest route is face up, take it
+			if (super.getFaceUpCards().get(i).getColor() == big.getColor()) {
+				super.drawTrainCard(i+1);
+			}
+			//if a rainbow card is face up, take it
+			else if (super.getFaceUpCards().get(i).getColor() == TrainCardColor.rainbow) {
+				super.drawTrainCard(i+1);
+			}
+		}		
+		//if no colors you want or rainbows are face up, draw a random card
+		super.drawTrainCard(0);
+	}
+
+
+}

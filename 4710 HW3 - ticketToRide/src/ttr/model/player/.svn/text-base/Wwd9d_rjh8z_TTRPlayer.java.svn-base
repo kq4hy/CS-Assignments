@@ -1,0 +1,562 @@
+package ttr.model.player;
+
+import java.util.*;
+
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+public class Wwd9d_rjh8z_TTRPlayer extends Player {
+
+	public Wwd9d_rjh8z_TTRPlayer(String name) {
+			super(name);
+		}
+
+	public Wwd9d_rjh8z_TTRPlayer(){
+			super("Wwd9d_rjh8z_TTRPlayer");
+		}
+
+	@Override
+	public void makeMove() {
+		System.out.println("");
+		/*ArrayList<ArrayList<Route>> foo = getPath(Destination.Seattle, Destination.Boston, true);
+		Routes routesf = Routes.getInstance();
+		for(ArrayList<Route> routes :foo){
+			System.out.println("Route from "+ routes.get(0).getDest1().name() + " to "+ routes.get(0).getDest2().name()+" at cost "+ routes.get(0).getCost());
+			//System.out.print(routes.get(0).getDest1().name()+" ");
+		}*/
+		
+		if(super.getDestinationTickets().isEmpty()){
+			super.drawDestinationTickets();
+		}
+		Goal foo = bestOption(super.getDestinationTickets());
+		foo.execute(this);
+		//just in case our AI dies on us :(
+		//System.out.println("ded ai, pls buff");
+		super.drawTrainCard(0);
+		
+		//Do I still have goals to accomplish
+			//if no, get new goals
+		//attempt to do current goal
+			//is it a good goal still?
+			//if it isnt move onto next goal
+		//what defines a good goal
+			//time left in game
+			//chance of successful completion
+			//interference from opponent
+		
+
+	}
+	
+	public Goal bestOption(ArrayList<DestinationTicket> al){
+		int maxPoints = -1;
+		for(int x=0; x<al.size(); x++)
+		{
+			maxPoints = -1;
+			if(al.get(x).getValue()>0)
+				maxPoints = x;
+		}
+		DestinationTicket destTick = al.get(maxPoints);
+		return new Goal(destTick.getTo(), destTick.getFrom());
+	}
+	
+	/**
+	 * Determines the routes comprising the shortest path between two cities
+	 * @param to city 1
+	 * @param from city 2
+	 * @param considerMadeMoves should the algorithm look to see if all routes have been claimed
+	 * @return the list of routes in the shortest path between destinations, nested ArrayList allows access to multiple existant routes between adjacent cities, returns null if no route is found
+	 */
+	
+	public ArrayList<ArrayList<Route>> getPath(Destination to, Destination from, boolean considerMadeMoves){
+		Routes routes = Routes.getInstance();
+		PriorityQueue<PathNode> openList = new PriorityQueue<PathNode>(1, new PathNodeComparator());
+		ArrayList<PathNode> closedList = new ArrayList<PathNode>();
+		
+		//get origin onto PQ
+		PathNode origin = new PathNode(from);
+		openList.add(origin);
+		
+		while(!openList.isEmpty()){
+			PathNode node = openList.poll();
+			//int fooCost = routes.shortestPathcost(from, node.getCurr());
+			//System.out.println("Were looking at "+node.getCurr().name()+". The previous node is "+node.getPrev()+". The distance from start is "+ node.getDistToStart()+ ". The best possible cost to here is "+fooCost);
+			//deal with the node having already been closed
+			if(closedList.contains(node)){
+				//System.out.println("Skipping already searched city "+node.getCurr().name()+"\n");
+				continue;
+			}
+			//deal with this being the end node
+			if(node.getCurr() == to){
+				//push all the routes into a stack
+				Stack<ArrayList<Route>> pathBuilder = new Stack<ArrayList<Route>>();
+				boolean pathNotComplete = true;
+				PathNode curr = node;
+				PathNode prev = null;
+				for(PathNode fooNode: closedList){
+					if(fooNode.getCurr() == curr.getPrev()){
+						prev = fooNode;
+						break;
+					}
+				}
+				while(pathNotComplete){
+					//if its the start node					
+					Destination currName = curr.getCurr();
+					Destination prevName = prev.getCurr();
+					if(currName == from){
+						break;
+					}
+					//System.out.println("Building path from "+currName.name()+ " to "+prevName.name());
+					pathBuilder.push(routes.getRoutes(currName, prevName));
+					curr = prev;
+					for(PathNode fooNode: closedList){
+						if(fooNode.getCurr() == curr.getPrev()){
+							prev = fooNode;
+						}
+					}	
+				}
+				
+				//System.out.println("Building route");
+				ArrayList<ArrayList<Route>> orderedRoute = new ArrayList<ArrayList<Route>>();
+				while(!pathBuilder.isEmpty()){
+					orderedRoute.add(pathBuilder.pop());
+				}
+				return orderedRoute;
+			}
+			//add all values to the pq
+			for(Destination dest: routes.getNeighbors(node.getCurr())){
+				//prevents looping
+				boolean isClosed = false;
+				for(PathNode fooNode : closedList)
+				{
+					if (dest == fooNode.getCurr()){
+						//System.out.println(dest.name()+" Node is closed");
+						isClosed = true;
+						break;
+					}
+				}
+				Route thisRoute = routes.getRoutes(dest, node.getCurr()).get(0);
+				if(considerMadeMoves){
+					if(!isClosed&&(!routes.isRouteClaimed(thisRoute)||(thisRoute.getOwner() instanceof Wwd9d_rjh8z_TTRPlayer))){
+						//get cost of this node
+						int cost = thisRoute.getCost();	
+						//System.out.println("Adding "+dest.name()+" to be searched. Its previous node is "+node.getCurr()+". Its cost is "+cost+". Its total cost is "+(cost+node.getDistToStart())+" Its owner is "+thisRoute.getOwner());
+						PathNode nextNode = new PathNode(dest, node.getCurr(), node.getDistToStart()+cost);
+						openList.add(nextNode);
+					}
+					else{
+						//System.out.println("Not searching "+dest.name()+" because it is already closed.");
+					}
+				}
+				else{
+					if(!isClosed){
+						//get cost of this node
+						int cost = thisRoute.getCost();	
+						//System.out.println("Adding "+dest.name()+" to be searched. Its previous node is "+node.getCurr()+". Its cost is "+cost+". Its total cost is "+(cost+node.getDistToStart()));
+						PathNode nextNode = new PathNode(dest, node.getCurr(), node.getDistToStart()+cost);
+						openList.add(nextNode);
+					}
+					else{
+						//System.out.println("Not searching "+dest.name()+" because it is already closed.");
+					}
+					
+				}
+			}
+			//close node
+			closedList.add(node);
+			//System.out.println("Closing: "+ node.getCurr()+"\n");
+		}
+		return null;
+		
+		
+	}
+
+}
+
+/**
+ * used to calculate shortest path
+ */
+class PathNode {
+	Destination curr, prev;
+	int distToStart;
+	
+	/**
+	 * Default constructor
+	 */
+	public PathNode(){
+		curr = null;
+		prev = null;
+		distToStart = Integer.MAX_VALUE;
+	}
+	
+	/**
+	 * creating the origin node
+	 * @param curr the origin node
+	 */
+	public PathNode(Destination curr){
+		this.curr = curr;
+		prev = null;
+		distToStart = 0;
+	}
+	
+	public PathNode(Destination curr, Destination prev, int distToStart){
+		this.curr = curr;
+		this.prev = prev;
+		this.distToStart = distToStart;
+	}
+	
+	@Override
+	public boolean equals(Object obj){
+		PathNode b = (PathNode) obj;
+		if(b.getCurr() == this.curr){
+			return true;
+		}
+		return false;
+		
+	}
+	
+
+	public Destination getCurr() {
+		return curr;
+	}
+
+	public void setCurr(Destination curr) {
+		this.curr = curr;
+	}
+
+	public Destination getPrev() {
+		return prev;
+	}
+
+	public void setPrev(Destination prev) {
+		this.prev = prev;
+	}
+
+	public int getDistToStart() {
+		return distToStart;
+	}
+
+	public void setDistToStart(int distToStart) {
+		this.distToStart = distToStart;
+	}
+	
+}
+/**
+ * Compares two pathnodes, for a priority queue
+ */
+class PathNodeComparator implements Comparator<PathNode>{
+
+	@Override
+	public int compare(PathNode to, PathNode from) {
+		return (to.getDistToStart()<from.getDistToStart()) ? -1: (to.getDistToStart()==from.getDistToStart()) ? 0 : 1;
+		
+	}
+	
+}
+
+
+class Goal {
+	Destination to, from;
+	boolean isCompleteable;
+
+	/**
+	 * Default constructor
+	 */
+	public Goal(){
+		to = null;
+		from = null;
+		isCompleteable = true;
+	}
+	
+	public Goal(Destination to, Destination from) {
+		this.to = to;
+		this.from = from;
+		isCompleteable = true;
+	}
+
+	/**
+	 * attempts to execute this goal
+	 * @param player the player
+	 * @return if the goal is unable to be executed
+	 */
+	public boolean execute(Wwd9d_rjh8z_TTRPlayer player){
+		boolean consideringClaimedRoutes = true;
+		ArrayList<ArrayList<Route>> neededRoutes = player.getPath(to, from, consideringClaimedRoutes);
+		
+		if(neededRoutes == null){
+			isCompleteable = false;
+			return false;
+		}
+		for(ArrayList<Route> routes :neededRoutes){
+			//System.out.println("Route from "+ routes.get(0).getDest1().name() + " to "+ routes.get(0).getDest2().name()+" at cost "+ routes.get(0).getCost());
+			//System.out.print(routes.get(0).getDest1().name()+" ");
+		}
+		//order routes by the level of threat they face
+		LinkedList<Threat> routesByThreat = new LinkedList<Threat>();
+		for(ArrayList<Route> routeBundle : neededRoutes){
+			int totalThreat = calcTotalThreat(routeBundle.get(0).getDest1())+calcTotalThreat(routeBundle.get(0).getDest2());
+			routesByThreat.add(new Threat(routeBundle, totalThreat));
+		}
+		routesByThreat.sort(new ThreatComparator());
+		for(Threat threat: routesByThreat){
+			Destination dest1 = threat.getRoute().get(0).getDest1();
+			Destination dest2 = threat.getRoute().get(0).getDest2();
+			int threatAmount = threat.getThreat();
+			//System.out.println("Route from "+dest1+ " to "+dest2+" has threat "+threatAmount);
+		}
+		//try to purchase route
+		for(Threat threat: routesByThreat){
+			ArrayList<Route> routeBundle = threat.getRoute();
+			for(Route route:routeBundle){
+				if(canPurchase(route, player.getHand(), player.getNumTrainPieces())){
+					System.out.println("I think I can claim the route from "+route.getDest1()+" to "+route.getDest2());
+					//if grey route
+					if(route.getColor()==TrainCardColor.rainbow){
+						CardAmount maxColor = getColorOfMaxPieces(player.getHand());
+						player.claimRoute(route, maxColor.getColor());
+						return true;
+					}
+					//normal route
+					player.claimRoute(route, route.getColor());
+					return true;
+				}
+			}
+		}
+		//get cards for routes
+		for(Threat threat: routesByThreat){
+			ArrayList<Route> routeBundle = threat.getRoute();
+			for(Route route:routeBundle){
+				if(!canPurchase(route, player.getHand(), player.getNumTrainPieces())&&route.getOwner()==null){
+					//if grey route
+					if(route.getColor()==TrainCardColor.rainbow){
+						player.drawTrainCard(0); //get random card
+						return true;
+					}
+					//normal route
+					ArrayList<TrainCard> visibleCards = player.getFaceUpCards();
+					for(int i = 0; i<visibleCards.size();i++){
+						if(visibleCards.get(i).getColor()==route.getColor()){
+							player.drawTrainCard(i+1);
+							return true;
+						}
+					}
+					//otherwise draw random card
+					player.drawTrainCard(0);
+					return true;
+				}
+			}
+		}
+		//System.out.println("We have failed to execute");
+		return false;
+		
+	}
+	
+	private boolean canPurchase(Route route, ArrayList<TrainCard> hand, int numPieces){
+		Routes routes = Routes.getInstance();
+		TrainCardColor routeColor = route.getColor();
+		int routeCost = route.getCost();
+		if(routes.isRouteClaimed(route)){
+			//System.out.println("This route from "+ route.getDest1()+" to "+route.getDest2()+" is owned. You have failed good sir.");
+			return false;
+		}
+		if(routeCost>numPieces){
+			//System.out.println("Not enough pieces");
+			return false;
+		}
+		
+		//tally up relevant pieces
+		int piecesOfColorAvailible = 0;
+		int piecesOfRainbowAvailible = 0;
+		for(TrainCard card:hand){
+			if(card.getColor()==routeColor){
+				piecesOfColorAvailible++;
+			}
+			if(card.getColor()==TrainCardColor.rainbow){
+				piecesOfRainbowAvailible++;
+			}
+		}
+		
+		//grey routes
+		if(routeColor==TrainCardColor.rainbow){
+			CardAmount mostCard = getColorOfMaxPieces(hand);
+			if((mostCard.getAmount()+piecesOfRainbowAvailible)>=routeCost){
+				return true;
+			}
+		}
+		
+		//normal routes
+		if((piecesOfColorAvailible+piecesOfRainbowAvailible)>=routeCost){
+			return true;
+		}
+		return false;
+	}
+	
+	private CardAmount getColorOfMaxPieces(ArrayList<TrainCard> hand){
+		CardAmount rainbow = new CardAmount(TrainCardColor.rainbow, 0);
+		CardAmount black = new CardAmount(TrainCardColor.black, 0);
+		CardAmount blue = new CardAmount(TrainCardColor.blue, 0);
+		CardAmount green = new CardAmount(TrainCardColor.green, 0);
+		CardAmount orange = new CardAmount(TrainCardColor.orange, 0);
+		CardAmount purple = new CardAmount(TrainCardColor.purple, 0);
+		CardAmount red = new CardAmount(TrainCardColor.red, 0);
+		CardAmount white = new CardAmount(TrainCardColor.white, 0);
+		CardAmount yellow = new CardAmount(TrainCardColor.yellow, 0);
+		CardAmount best = new CardAmount(TrainCardColor.orange, 0);
+		for(TrainCard card:hand){
+			if(card.getColor()==TrainCardColor.rainbow){
+				rainbow.incAmount();
+				if(rainbow.getAmount()>best.getAmount()) best = rainbow;
+			}
+			if(card.getColor()==TrainCardColor.black){
+				black.incAmount();
+				if(black.getAmount()>best.getAmount()) best = black;
+			}
+			if(card.getColor()==TrainCardColor.blue){
+				blue.incAmount();
+				if(blue.getAmount()>best.getAmount()) best = blue;
+			}
+			if(card.getColor()==TrainCardColor.green){
+				green.incAmount();
+				if(green.getAmount()>best.getAmount()) best = green;
+			}
+			if(card.getColor()==TrainCardColor.orange){
+				orange.incAmount();
+				if(orange.getAmount()>best.getAmount()) best = orange;
+			}
+			if(card.getColor()==TrainCardColor.purple){
+				purple.incAmount();
+				if(purple.getAmount()>best.getAmount()) best = purple;
+			}
+			if(card.getColor()==TrainCardColor.red){
+				red.incAmount();
+				if(red.getAmount()>best.getAmount()) best = red;
+			}
+			if(card.getColor()==TrainCardColor.white){
+				white.incAmount();
+				if(white.getAmount()>best.getAmount()) best = white;
+			}
+			if(card.getColor()==TrainCardColor.yellow){
+				yellow.incAmount();
+				if(yellow.getAmount()>best.getAmount()) best = yellow;
+			}
+		}
+		return best;
+	}
+	
+	private int calcTotalThreat(Destination a){
+		Routes routes = Routes.getInstance();
+		int threat = 0;
+		for(Destination dest: routes.getNeighbors(a)){
+			ArrayList<Route> fooRouteBundle = routes.getRoutes(dest, a);
+			for(Route fooRoute: fooRouteBundle){
+				if(!(fooRoute.getOwner() instanceof Wwd9d_rjh8z_TTRPlayer)){
+					threat++;
+					break;
+				}
+			}
+		}
+		return threat;
+	}
+	
+	public Destination getTo() {
+		return to;
+	}
+
+	public void setTo(Destination to) {
+		this.to = to;
+	}
+
+	public Destination getFrom() {
+		return from;
+	}
+
+	public void setFrom(Destination from) {
+		this.from = from;
+	}
+
+	public boolean isCompleteable() {
+		return isCompleteable;
+	}
+
+	public void setCompleteable(boolean isCompleteable) {
+		this.isCompleteable = isCompleteable;
+	}
+	
+	
+}
+
+class Threat{
+	private int threat;
+	private ArrayList<Route> route;
+	public Threat(){
+		threat = -1;
+		route = null;
+	}
+	public Threat(ArrayList<Route> route, int threat){
+		this.route = route;
+		this.threat = threat;
+	}
+	public int getThreat() {
+		return threat;
+	}
+	public ArrayList<Route> getRoute() {
+		return route;
+	}
+}
+
+class CardAmount{
+	private TrainCardColor color;
+	private int amount;
+	public CardAmount(){
+		color = null;
+		amount = -1;
+	}
+	public CardAmount(TrainCardColor color, int amount){
+		this.color = color;
+		this.amount = amount;
+	}
+	public TrainCardColor getColor() {
+		return color;
+	}
+	public int getAmount() {
+		return amount;
+	}
+	public void incAmount(){
+		amount++;
+	}
+	
+}
+
+class ThreatComparator implements Comparator<Threat>{
+	@Override
+	public int compare(Threat a, Threat b){
+		return a.getThreat()<b.getThreat()?-1:a.getThreat()==b.getThreat()?0:1;
+	}
+}
+
+class RouteThreatComparator implements Comparator<Route>{
+	@Override
+	public int compare(Route a, Route b){
+		//find number
+		int aTotalThreat =  calcTotalThreat(a.getDest1())+calcTotalThreat(a.getDest2());
+		int bTotalThreat =  calcTotalThreat(b.getDest1())+calcTotalThreat(b.getDest2());
+		return (aTotalThreat<bTotalThreat)?-1:(aTotalThreat==bTotalThreat)?0:1;
+	}
+	
+	private int calcTotalThreat(Destination a){
+		Routes routes = Routes.getInstance();
+		int threat = 0;
+		for(Destination dest: routes.getNeighbors(a)){
+			ArrayList<Route> fooRouteBundle = routes.getRoutes(dest, a);
+			for(Route fooRoute: fooRouteBundle){
+				if(!(fooRoute.getOwner() instanceof Wwd9d_rjh8z_TTRPlayer)){
+					threat++;
+				}
+			}
+		}
+		return threat;
+	}
+}

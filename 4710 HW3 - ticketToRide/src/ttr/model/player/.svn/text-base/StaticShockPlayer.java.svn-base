@@ -1,0 +1,451 @@
+package ttr.model.player;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCard;
+import ttr.model.trainCards.TrainCardColor;
+
+/**
+ * A very stupid player that simply draws train cards only. Shown as an example of implemented a player.
+ * */
+public class StaticShockPlayer extends Player{
+	
+	private int goOne = 2;
+	private ArrayList<TrainCard> faceUp = new ArrayList<TrainCard>();
+	private ArrayList<Route> plan = new ArrayList<Route>();
+	private int rawValue = 2;
+	private int chokepointValue = 4;
+	private int destBoost = 4;
+	private int spiteBoost = 1;
+	private int rebuildVal = 20;
+	public ArrayList<Route> chokepointList = new ArrayList<Route>();
+	public static Routes gamespace = Routes.getInstance();
+	public static ArrayList<Route> copyFrom = gamespace.getAllRoutes();
+//	public int[] routeFrustration = new int[copyFrom.size()];
+	public HashMap<Route, Integer> indexMapping = new HashMap<Route, Integer>();
+	public Route chokeOne = new Route(Destination.LosAngeles, Destination.Phoenix, 3, TrainCardColor.rainbow);
+	public Route chokeTwo = new Route(Destination.Nashville, Destination.Atlanta, 1, TrainCardColor.rainbow);
+	public Route chokeThree = new Route(Destination.Houston, Destination.NewOrleans, 2, TrainCardColor.rainbow);
+	public Route chokeFour = new Route(Destination.Portland, Destination.Seattle, 1, TrainCardColor.rainbow);
+	public Route chokeFive = new Route(Destination.Dallas, Destination.Houston, 1, TrainCardColor.rainbow);
+	
+
+
+	
+	
+	/**
+	 * Need to have this constructor so the player has a name, you can use no parameters and pass the name of your player
+	 * to the super constructor, or just take in the name as a parameter. Both options are shown here.
+	 * */
+	public StaticShockPlayer(String name) {
+		super(name);
+		for (int i = 0; i < copyFrom.size() ; i++)
+			indexMapping.put(copyFrom.get(i), i);
+		chokepointList.add(chokeOne);
+		chokepointList.add(chokeTwo);
+		chokepointList.add(chokeThree);
+		chokepointList.add(chokeFour);
+		chokepointList.add(chokeFive);
+	}
+	public StaticShockPlayer(){
+		super("Wow, Great Player");
+		for (int i = 0; i < copyFrom.size() ; i++)
+			indexMapping.put(copyFrom.get(i), i);
+		chokepointList.add(chokeOne);
+		chokepointList.add(chokeTwo);
+		chokepointList.add(chokeThree);
+		chokepointList.add(chokeFour);
+		chokepointList.add(chokeFive);
+		
+	}
+	
+	/**
+	 * MUST override the makeMove() method and implement it.
+	 * */
+	@Override
+	public void makeMove(){
+		if (goOne <= 0) {
+			super.drawDestinationTickets();
+			goOne++;
+		}
+		faceUp = super.getFaceUpCards();
+			for (int i = 1; i <= 5 ; i ++) {
+				if (faceUp.get(i-1).getColor().equals(TrainCardColor.rainbow)){
+					super.drawTrainCard(i);
+					break;
+				}
+			}
+		ArrayList<DestinationTicket> DTs = super.getDestinationTickets();
+		if (DTs.size() == 0 && this.getNumTrainPieces() > 20)
+			super.drawDestinationTickets();
+//		ArrayList<Route>contenders = new ArrayList<Route>();
+//		for (int h = 0 ; h < copyFrom.size() ; h++) {
+//			Route contenderCopy = new Route(copyFrom.get(h).getDest1(), copyFrom.get(h).getDest2(), copyFrom.get(h).getCost(), copyFrom.get(h).getColor());
+//			contenders.add(contenderCopy);
+//		}		
+		plan = makePlan(copyFrom, chokepointList);
+//		TrainCardColor plannedColor = plan.get(0).getColor();
+//		int plannedCost = plan.get(0).getCost();
+//		if (plannedColor.equals(TrainCardColor.rainbow)){
+//			TrainCardColor topColor = getMostCommonColor();
+//			if ((getNumTrainCardsByColor(topColor) + getNumTrainCardsByColor(TrainCardColor.rainbow)) >= plannedCost){
+//				claimRoute(plan.get(0), topColor);				
+//			}
+//		else if ((getNumTrainCardsByColor(plannedColor) + getNumTrainCardsByColor(TrainCardColor.rainbow)) >= plannedCost){
+//			claimRoute(plan.get(0), plannedColor);
+//		}
+//	}
+		//HashMap<TrainCardColor, Integer> neededColors = planForPlan(plan);
+		executePlan(plan);
+//		for (int i = 0 ; i < copyFrom.size(); i ++) {
+//			if (routeFrustration[i] > frustrationCap)
+//				routeFrustration[i]--;
+//		}
+		
+		super.drawTrainCard(0);
+			
+}
+	
+	public TrainCardColor getMostCommonColor() {
+		int max = 0;
+		TrainCardColor mostCommonColor = TrainCardColor.rainbow;
+		if (getNumTrainCardsByColor(TrainCardColor.black) > max)
+			mostCommonColor = TrainCardColor.black;
+		if (getNumTrainCardsByColor(TrainCardColor.blue) > max)
+			mostCommonColor = TrainCardColor.blue;
+		if (getNumTrainCardsByColor(TrainCardColor.green) > max)
+			mostCommonColor = TrainCardColor.green;
+		if (getNumTrainCardsByColor(TrainCardColor.orange) > max)
+			mostCommonColor = TrainCardColor.orange;
+		if (getNumTrainCardsByColor(TrainCardColor.purple) > max)
+			mostCommonColor = TrainCardColor.purple;
+		if (getNumTrainCardsByColor(TrainCardColor.red) > max)
+			mostCommonColor = TrainCardColor.red;
+		if (getNumTrainCardsByColor(TrainCardColor.white) > max)
+			mostCommonColor = TrainCardColor.white;
+		if (getNumTrainCardsByColor(TrainCardColor.yellow) > max)
+			mostCommonColor = TrainCardColor.yellow;
+		return mostCommonColor;
+	}
+	
+//	public HashMap<TrainCardColor, Integer> planForPlan(ArrayList<Route> plan){
+//		HashMap<TrainCardColor, Integer> neededColors = new HashMap<TrainCardColor, Integer>();
+//		neededColors.put(TrainCardColor.rainbow, (Integer)1000);
+//		for ( int i = 0; i < plan.size(); i ++) {
+//				neededColors.put(plan.get(i).getColor(), neededColors.get(plan.get(i).getColor())+1);	
+//		}
+//		return neededColors;
+//	}
+	
+	public ArrayList<Route> makePlan(ArrayList<Route> contenders, ArrayList<Route> chokepoints){
+		ArrayList<Route> routesToTake = new ArrayList<Route>();
+		ArrayList<Route> workspace = new ArrayList<Route>();
+		ArrayList<Route> rebuiltRoutes = new ArrayList<Route>();
+		ArrayList<Destination> decomposition; 
+		for (int h = 0; h < 10 ; h++){
+		int[] contenderHVal = new int[contenders.size()];
+		int max = 0;
+		int index = 0;
+		if (this.getPlayerClaimedRoutes().size() > 5) {
+			for (int i = 0 ; i < this.getDestinationTickets().size() ; i++){
+				decomposition = findAltPath(this.getPlayerClaimedRoutes(), this.getDestinationTickets().get(i).getFrom(), this.getDestinationTickets().get(i).getTo());
+				
+				workspace = rebuildRoute(decomposition);
+				
+				for (int j = 0 ; j < workspace.size() ; j++) {
+					
+					if (!(rebuiltRoutes).contains(workspace.get(j))){
+						
+						rebuiltRoutes.add(workspace.get(j));
+						
+					}
+				}
+			}
+		}
+		for (int i = 0; i < contenders.size(); i++){
+			if (!(gamespace.isRouteClaimed(copyFrom.get(i))) && !(routesToTake.contains(copyFrom.get(i)))){
+			contenderHVal[i] = contenders.get(i).getPoints() / rawValue;
+			if (this.getPlayerClaimedRoutes().size() > 5) {
+				if (rebuiltRoutes.contains(contenders.get(i))){
+					contenderHVal[i] += rebuildVal;
+				}
+			}
+			contenderHVal[i] += partOfDestTicket(contenders.get(i));
+			for (int j = 0; j < 5 ; j++) {
+				if (contenders.get(i).equals(chokepointList.get(j)))
+					contenderHVal[i] += chokepointValue; 
+			}
+			contenderHVal[i] += Spite(copyFrom.get(i).getDest1());
+			contenderHVal[i] += Spite(copyFrom.get(i).getDest2());
+			if (contenderHVal[i] > max){
+				index = i;
+				max = contenderHVal[i];
+			}
+			}
+		}
+		if (!(gamespace.isRouteClaimed(copyFrom.get(index))) && !(routesToTake.contains(copyFrom.get(index))))
+			routesToTake.add(copyFrom.get(index));
+			System.out.println(routesToTake.get(h).toString() + "is worth " + contenderHVal[index] + " to me." );
+		}
+		
+		return routesToTake;	
+	}
+	
+	public int Spite(Destination target){
+		int spiteVal = 0;
+		ArrayList<Destination> neighbors = new ArrayList<Destination>();
+		neighbors = gamespace.getNeighbors(target);
+		for (int i = 0 ; i < neighbors.size(); i++){
+			ArrayList<Route> neighRoute = new ArrayList<Route>();
+			neighRoute = gamespace.getRoutes(target, neighbors.get(i));
+			if (gamespace.isRouteClaimed(neighRoute.get(0))) {
+				if(neighRoute.get(0).getOwner() != this)
+					spiteVal += spiteBoost;
+			}
+				
+		}
+		return spiteVal;
+	}
+	
+	public ArrayList<Destination> findAltPath(ArrayList<Route> possessed, Destination from, Destination to){
+		ArrayList<Destination> altPath = new ArrayList<Destination>();
+		int altDistFrom = 9999;
+		int altDistTo = 9999;
+		Destination in = Destination.Atlanta;
+		Destination out = Destination.Atlanta;
+		int x, y;
+		for (int i = 0 ; i < possessed.size() ; i++){ {
+				x = gamespace.shortestPathcost(from, possessed.get(i).getDest1());
+				if (x < altDistFrom){
+					altDistFrom = x;
+					in = possessed.get(i).getDest1();
+				}
+				y = gamespace.shortestPathcost(possessed.get(i).getDest1(), to);
+				if (y < altDistTo){
+					altDistTo = y;
+					out = possessed.get(i).getDest1();
+				}
+				if ( i == possessed.size() -1 ){
+					x = gamespace.shortestPathcost(from, possessed.get(i).getDest2());
+					if (x < altDistFrom){
+						altDistFrom = x;
+						in = possessed.get(i).getDest2();
+					}
+					y = gamespace.shortestPathcost(possessed.get(i).getDest2(), to);
+					if (y < altDistTo){
+						altDistTo = y;
+						out = possessed.get(i).getDest2();
+					}
+				}
+		}
+			altPath.add(from);
+			altPath.add(in);
+			altPath.add(out);
+			altPath.add(to);
+		}
+		
+		return altPath;
+	}
+	
+	public ArrayList<Route> rebuildRoute(ArrayList<Destination> brokenPath){
+		ArrayList<Route> rebuilt = new ArrayList<Route>();
+		nextSide:
+		for (int i = 0 ; i < 3 ; i += 2){
+			Destination from = brokenPath.get(i);
+			Destination to = brokenPath.get(1+1);
+			if(from == to) break;
+		
+		/* Open and Closed lists (breadth first search) */
+		HashMap<Destination, Integer> openList = new HashMap<Destination, Integer>();
+		HashMap<Destination, Integer> closedList = new HashMap<Destination, Integer>();
+		HashMap<Destination, Destination> prevStop = new HashMap<Destination, Destination>();
+		ArrayList<Destination> backwards = new ArrayList<Destination>();
+		
+		openList.put(from, 0);
+				
+		
+		while(openList.size() > 0){
+			
+			/* Pop something off the open list, if destination then return true */
+			Destination next = null;
+			int minCost = 9999;
+			for(Destination key : openList.keySet()){
+				if(openList.get(key) < minCost){
+					next = key;
+					minCost = openList.get(key);
+				}
+			
+			}
+			
+			/* Take it off the open list and put on the closed list */
+			openList.remove(next);
+			closedList.put(next, minCost);
+			
+			/* If this is the destination build shortest path */
+			if(next == to) {
+				backwards.add(next);
+				while (!backwards.contains(from)){
+					backwards.add(prevStop.get(next));
+					next = prevStop.get(next);
+				}
+				
+				backwards.add(from);
+				for (int k = 0; k < backwards.size() - 1 ; k++)
+				{ 
+					rebuilt.add(gamespace.getRoutes(backwards.get(i), backwards.get(i+1)).get(0));
+					if (k == backwards.size() - 1)
+						continue nextSide;
+				}
+			}
+			
+			/* Get all the neighbors of the next city that aren't on open or closed lists already */
+			for(Destination neighbor : gamespace.getNeighbors(next)){
+				if(closedList.containsKey(neighbor)) continue;
+				/* get route between next and neighbor and see if better than neighbor's value */
+				ArrayList<Route> routesToNeighbor = gamespace.getRoutes(next, neighbor);
+				for(Route routeToNeighbor : routesToNeighbor){
+					/* only considers routes not owned by the opponent */
+					if ((routeToNeighbor.getOwner() == null) || routeToNeighbor.getOwner() == this){
+					int newCost = closedList.get(next) + routeToNeighbor.getCost();
+					if(openList.containsKey(neighbor)){	
+						if(newCost < openList.get(neighbor)){
+							openList.put(neighbor, newCost);
+							prevStop.put(neighbor, next);
+						}
+					}
+					else{
+						openList.put(neighbor, newCost);
+						prevStop.put(neighbor, next);
+					}
+				}
+				}
+			}
+		}
+		}		
+		return rebuilt;
+	}
+	public int partOfDestTicket(Route target){
+		ArrayList<DestinationTicket> DTs = super.getDestinationTickets();
+		nextTicket:
+		for (int i = 0 ; i < DTs.size() ; i++){
+			Destination from = DTs.get(i).getFrom();
+			Destination to = DTs.get(i).getTo();
+			if(from == to) break;
+		
+		/* Open and Closed lists (breadth first search) */
+		HashMap<Destination, Integer> openList = new HashMap<Destination, Integer>();
+		HashMap<Destination, Integer> closedList = new HashMap<Destination, Integer>();
+		HashMap<Destination, Destination> prevStop = new HashMap<Destination, Destination>();
+		ArrayList<Destination> backwards = new ArrayList<Destination>();
+		
+		openList.put(from, 0);
+				
+		
+		while(openList.size() > 0){
+			
+			/* Pop something off the open list, if destination then return true */
+			Destination next = null;
+			int minCost = 9999;
+			for(Destination key : openList.keySet()){
+				if(openList.get(key) < minCost){
+					next = key;
+					minCost = openList.get(key);
+				}
+			
+			}
+			
+			/* Take it off the open list and put on the closed list */
+			openList.remove(next);
+			closedList.put(next, minCost);
+			
+			/* If this is the destination build shortest path */
+			if(next == to) {
+				backwards.add(next);
+				while (!backwards.contains(from)){
+					backwards.add(prevStop.get(next));
+					next = prevStop.get(next);
+				}
+				
+				backwards.add(from);
+				for (int k = 0; k < backwards.size() - 1 ; k++)
+				{ 
+					if ((backwards.get(k) == target.getDest1() && backwards.get(k+1) == target.getDest2()) ||(backwards.get(k) == target.getDest2() && backwards.get(k+1) == target.getDest1()))
+						{
+						return minCost*destBoost;
+						}
+					if (k == backwards.size() - 1)
+						continue nextTicket;
+				}
+			}
+			
+			/* Get all the neighbors of the next city that aren't on open or closed lists already */
+			for(Destination neighbor : gamespace.getNeighbors(next)){
+				if(closedList.containsKey(neighbor)) continue;
+				/* get route between next and neighbor and see if better than neighbor's value */
+				ArrayList<Route> routesToNeighbor = gamespace.getRoutes(next, neighbor);
+				for(Route routeToNeighbor : routesToNeighbor){
+					/* only considers routes not owned by the opponent */
+					if ((routeToNeighbor.getOwner() == null) || routeToNeighbor.getOwner() == this){
+					int newCost = closedList.get(next) + routeToNeighbor.getCost();
+					if(openList.containsKey(neighbor)){	
+						if(newCost < openList.get(neighbor)){
+							openList.put(neighbor, newCost);
+							prevStop.put(neighbor, next);
+						}
+					}
+					else{
+						openList.put(neighbor, newCost);
+						prevStop.put(neighbor, next);
+					}
+				}
+				}
+			}
+		}
+		}
+		return 0;
+	}
+	
+	public void executePlan(ArrayList<Route> plan){
+		for (int i = 0 ; i < plan.size(); i ++) {
+			if	(plan.get(i).getColor() != TrainCardColor.rainbow && !(gamespace.isRouteClaimed(plan.get(i)))){ 
+				if (plan.get(i).getCost() <= (this.getNumTrainCardsByColor(plan.get(i).getColor()) + this.getNumTrainCardsByColor(TrainCardColor.rainbow))){
+					claimRoute(plan.get(i), plan.get(i).getColor());
+			}
+//				else 
+//					routeFrustration[indexMapping.get(plan.get(i))] += 5;
+			}
+				else if (!(gamespace.isRouteClaimed(plan.get(i)))){
+					if (plan.get(i).getCost() <= (this.getNumTrainCardsByColor(getMostCommonColor()) + this.getNumTrainCardsByColor(TrainCardColor.rainbow))){
+						claimRoute(plan.get(i), getMostCommonColor());
+					}
+//					else 
+//						routeFrustration[indexMapping.get(plan.get(i))] += 5;
+				}
+			faceUp = super.getFaceUpCards();
+			if (plan.get(i).getColor() == TrainCardColor.rainbow) {
+			for (int j = 1; j <= 5 ; j ++) {
+				if (faceUp.get(j-1).getColor().equals(getMostCommonColor())){
+					super.drawTrainCard(j);
+					break;
+				}
+			}
+			}
+			else {
+				for (int h = 1; h <=5; h++){
+					if (faceUp.get(h-1).getColor().equals(plan.get(i).getColor())){
+						super.drawTrainCard(h);
+						break;
+					}	
+				}
+			}
+		}
+	}
+		
+}
+
+

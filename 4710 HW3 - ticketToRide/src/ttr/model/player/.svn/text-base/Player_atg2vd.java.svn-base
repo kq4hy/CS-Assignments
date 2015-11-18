@@ -1,0 +1,495 @@
+/**
+ * Adrian Leo Gloria (atg2vd)
+ * Alishan Hassan (ah2xt)
+ */
+
+package ttr.model.player;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Iterator;
+
+import ttr.model.destinationCards.Destination;
+import ttr.model.destinationCards.DestinationTicket;
+import ttr.model.destinationCards.Route;
+import ttr.model.destinationCards.Routes;
+import ttr.model.trainCards.TrainCardColor;
+
+public class Player_atg2vd extends Player {
+	/**
+	 * Need to have this constructor so the player has a name, you can use no
+	 * parameters and pass the name of your player to the super constructor, or
+	 * just take in the name as a parameter. Both options are shown here.
+	 */
+	public Player_atg2vd(String name) {
+		super(name);
+	}
+
+	public Player_atg2vd() {
+		super("Shrike");
+	}
+
+	boolean flag = false;
+
+	/**
+	 * MUST override the makeMove() method and implement it.
+	 */
+	@Override
+	public void makeMove() {
+		/*
+		 * Always draw train cards (0 means we are drawing from the pile, not
+		 * from the face-up cards)
+		 */
+
+		/**
+		 * Make the decision to draw a card
+		 */
+		for (int i = 0; i < super.getFaceUpCards().size(); i++) {
+			if (super.getFaceUpCards().get(i).getColor() == TrainCardColor.rainbow) {
+				super.drawTrainCard(i + 1);
+				return;
+			}
+		}
+
+		if (super.getDestinationTickets().size() == 0 && super.getNumTrainPieces() > 0) {
+			super.drawDestinationTickets();
+			return;
+		}
+
+		/**
+		 * Build a desirable path
+		 */
+		ArrayList<ArrayList<Route>> desiredPaths = new ArrayList<ArrayList<Route>>();
+		for (DestinationTicket ticket : super.getDestinationTickets()) {
+			ArrayList<Route> path = new ArrayList<Route>();
+			path = getMinCostPath(ticket.getFrom(), ticket.getTo());
+			desiredPaths.add(path);
+		}
+		ArrayList<Route> allDesiredRoutes = new ArrayList<Route>();
+		for (ArrayList<Route> path : desiredPaths) {
+			for (Route route : path) {
+				allDesiredRoutes.add(route);
+			}
+		}
+		if (allDesiredRoutes.size() > 0) {
+			targetThisPath(allDesiredRoutes);
+		}
+		super.drawTrainCard(0);
+	}
+
+	/**
+	 * Makes decisions to move based on the given path
+	 */
+	public void targetThisPath(ArrayList<Route> path) {
+		/*
+		 * Remove routes that are already claimed
+		 */
+		for (Iterator<Route> iterator = path.iterator(); iterator.hasNext();) {
+			Route next = iterator.next();
+			if (Routes.getInstance().isRouteClaimed(next)) {
+				iterator.remove();
+			}
+			ArrayList<Route> theseRoutes = Routes.getInstance().getRoutes(next.getDest1(), next.getDest2());
+			if (theseRoutes.size() == 2) {
+				if (theseRoutes.get(0).getColor() != TrainCardColor.rainbow
+						&& theseRoutes.get(1).getColor() != TrainCardColor.rainbow && path.indexOf(next) != -1) {
+					if (theseRoutes.get(0).getCost()
+							- getNumTrainCardsByColor(theseRoutes.get(0).getColor()) < theseRoutes.get(1).getCost()
+									- getNumTrainCardsByColor(theseRoutes.get(1).getColor())) {
+						path.set(path.indexOf(next), theseRoutes.get(0));
+					} else {
+						path.set(path.indexOf(next), theseRoutes.get(1));
+					}
+				}
+			}
+		}
+
+		if (path.size() > 0) {
+
+			/*
+			 * Sort routes by length
+			 */
+			Collections.sort(path, new Comparator<Route>() {
+				@Override
+				public int compare(Route route1, Route route2) {
+					return route1.getCost() - route2.getCost();
+				}
+			});
+
+			/*
+			 * Make a list of all routes on the map and sort it by length
+			 */
+
+			ArrayList<Route> allRoutes = new ArrayList<Route>(Routes.getInstance().getAllRoutes());
+
+			for (Iterator<Route> iterator = allRoutes.iterator(); iterator.hasNext();) {
+				Route next = iterator.next();
+				if (Routes.getInstance().isRouteClaimed(next)) {
+					iterator.remove();
+				}
+			}
+
+			Collections.sort(allRoutes, new Comparator<Route>() {
+				@Override
+				public int compare(Route r1, Route r2) {
+					return r1.getCost() - r2.getCost();
+				}
+			});
+
+			/*
+			 * Make a list of colors and sort it by the number of cards of that
+			 * color the player possesses in hand
+			 */
+			EnumSet<TrainCardColor> enumColors = EnumSet.allOf(TrainCardColor.class);
+
+			ArrayList<TrainCardColor> colors = new ArrayList<TrainCardColor>(enumColors);
+
+			Comparator<TrainCardColor> sortByNumTrainCards = new Comparator<TrainCardColor>() {
+				@Override
+				public int compare(TrainCardColor color1, TrainCardColor color2) {
+					return getNumTrainCardsByColor(color2) - getNumTrainCardsByColor(color1);
+				}
+			};
+
+			Collections.sort(colors, sortByNumTrainCards);
+
+			/*
+			 * Try to claim routes on the path
+			 */
+			for (Route currentRoute : path) {
+				if (Routes.getInstance().isRouteClaimed(currentRoute)
+						|| super.getNumTrainPieces() < currentRoute.getCost()) {
+					break;
+				}
+				if (currentRoute.getColor() != TrainCardColor.rainbow
+						&& getNumTrainCardsByColor(currentRoute.getColor())
+								+ getNumTrainCardsByColor(TrainCardColor.rainbow) >= currentRoute.getCost()) {
+					super.claimRoute(currentRoute, currentRoute.getColor());
+					return;
+				} else if (currentRoute.getColor() == TrainCardColor.rainbow) {
+					for (TrainCardColor color : colors) {
+						if (color != TrainCardColor.rainbow && getNumTrainCardsByColor(color)
+								+ getNumTrainCardsByColor(TrainCardColor.rainbow) >= currentRoute.getCost()) {
+							super.claimRoute(currentRoute, color);
+							return;
+						} else if (color == TrainCardColor.rainbow
+								&& getNumTrainCardsByColor(color) >= currentRoute.getCost()) {
+							super.claimRoute(currentRoute, TrainCardColor.rainbow);
+							return;
+						}
+					}
+				}
+			}
+
+			/*
+			 * Try to draw face-up cards of the same color as a route on the
+			 * path
+			 */
+			for (Route currentRoute : path) {
+				if (super.getNumTrainPieces() < currentRoute.getCost()) {
+					break;
+				}
+				for (int i = 0; i < super.getFaceUpCards().size(); i++) {
+					if (super.getFaceUpCards().get(i).getColor() == currentRoute.getColor()) {
+						super.drawTrainCard(i + 1);
+						return;
+					}
+				}
+			}
+
+			Collections.sort(colors, sortByNumTrainCards.reversed());
+
+			boolean getLongRoutesFlag = false;
+
+			for (Route route : path) {
+				if (!Routes.getInstance().isRouteClaimed(route)) {
+					colors.remove(route.getColor());
+				}
+			}
+
+			for (int i = 0; i < colors.size(); i++) {
+				if (getNumTrainCardsByColor(colors.get(i)) > 3) {
+					getLongRoutesFlag = true;
+				}
+			}
+
+			/*
+			 * Try to use surplus cards to claim other routes not on the path
+			 */
+			if (getLongRoutesFlag) {
+				for (Route currentRoute : allRoutes) {
+					if (super.getNumTrainPieces() < currentRoute.getCost()) {
+						break;
+					}
+					if (currentRoute.getCost() > 3) {
+						if (currentRoute.getColor() != TrainCardColor.rainbow
+								&& colors.contains(currentRoute.getColor())
+								&& getNumTrainCardsByColor(currentRoute.getColor())
+										+ getNumTrainCardsByColor(TrainCardColor.rainbow) >= currentRoute.getCost()) {
+							super.claimRoute(currentRoute, currentRoute.getColor());
+							return;
+						} else if (currentRoute.getColor() == TrainCardColor.rainbow) {
+							for (TrainCardColor color : colors) {
+								if (color != TrainCardColor.rainbow && getNumTrainCardsByColor(color)
+										+ getNumTrainCardsByColor(TrainCardColor.rainbow) >= currentRoute.getCost()) {
+									super.claimRoute(currentRoute, color);
+									return;
+								} else if (color == TrainCardColor.rainbow
+										&& getNumTrainCardsByColor(color) >= currentRoute.getCost()) {
+									super.claimRoute(currentRoute, TrainCardColor.rainbow);
+									return;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Get the path of minimum cost path of routes (least number of wagons)
+	 * between two destinations
+	 */
+	private ArrayList<Route> getMinCostPath(Destination from, Destination to) {
+		ArrayList<Route> path = new ArrayList<Route>();
+
+		/* If same, just return false */
+		if (from == to)
+			return path;
+
+		/* Open and Closed lists (breadth first search) */
+		HashMap<Destination, Integer> openList = new HashMap<Destination, Integer>();
+		HashMap<Destination, Integer> closedList = new HashMap<Destination, Integer>();
+
+		/*
+		 * Holds the previous destination on a path starting at from and ending
+		 * at to
+		 */
+		HashMap<Destination, Destination> previous = new HashMap<Destination, Destination>();
+
+		openList.put(from, 0);
+
+		int whileLoopBreaker = 0;
+		while (openList.size() > 0) {
+			/*
+			 * Pop something off the open list, if destination then return true
+			 */
+			if (whileLoopBreaker > 100) {
+				System.out.println("ERROR: Open List never becomes empty");
+				break;
+			}
+			whileLoopBreaker++;
+
+			Destination next = null;
+			int minCost = 9999;
+			for (Destination key : openList.keySet()) {
+				if (openList.get(key) < minCost) {
+					next = key;
+					minCost = openList.get(key);
+				}
+			}
+
+			/* Take it off the open list and put on the closed list */
+			openList.remove(next);
+			closedList.put(next, minCost);
+
+			/* If this is the destination, then return!!!! */
+			if (next == to)
+				break;
+
+			/*
+			 * Get all the neighbors of the next city that aren't on open or
+			 * closed lists already
+			 */
+			for (Destination neighbor : Routes.getInstance().getNeighbors(next)) {
+				if (closedList.containsKey(neighbor))
+					continue;
+
+				/*
+				 * get route between next and neighbor and see if better than
+				 * neighbor's value
+				 */
+				ArrayList<Route> routesToNeighbor = Routes.getInstance().getRoutes(next, neighbor);
+				for (Route routeToNeighbor : routesToNeighbor) {
+					if (isRouteNotOwnedByOtherPlayer(routeToNeighbor)) {
+						int newCost = closedList.get(next) + routeToNeighbor.getCost();
+						if (openList.containsKey(neighbor)) {
+							if (newCost < openList.get(neighbor)) {
+								openList.put(neighbor, newCost);
+								previous.put(neighbor, next);
+							}
+						} else {
+							openList.put(neighbor, newCost);
+							previous.put(neighbor, next);
+						}
+					}
+				}
+			}
+		}
+
+		Destination next = to;
+		whileLoopBreaker = 0;
+		while (next != from) {
+			if (whileLoopBreaker > 100) {
+				System.out.println("ERROR: Path from " + from + " to " + to + " is not built successfully");
+				return new ArrayList<Route>();
+			}
+			ArrayList<Route> candidateRoutes = Routes.getInstance().getRoutes(next, previous.get(next));
+			for (Route candidateRoute : candidateRoutes) {
+				if (isRouteNotOwnedByOtherPlayer(candidateRoute)) {
+					path.add(candidateRoute);
+					next = previous.get(next);
+					break;
+				}
+			}
+			whileLoopBreaker++;
+		}
+		return path;
+	}
+
+	/**
+	 * Checks to see if the route passed as a parameter is NOT owned by the
+	 * other player; that is, if the route is owned by this player or unclaimed
+	 */
+	private boolean isRouteNotOwnedByOtherPlayer(Route candidateRoute) {
+		ArrayList<Route> routes = Routes.getInstance().getRoutes(candidateRoute.getDest1(), candidateRoute.getDest2());
+		for (int i = 0; i < routes.size(); i++) {
+			if (routes.get(i).getOwner() != null && routes.get(i).getOwner() != this) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	public ArrayList<Route> buildReallyGreedyPath(Destination startPoint, Destination endPoint) {
+
+		// load up hard coded positions
+		HashMap<Destination, String> positions = new HashMap<Destination, String>();
+		positions.put(Destination.Atlanta, "798 432");
+		positions.put(Destination.Boston, "967 141");
+		positions.put(Destination.Calgary, "240 88");
+		positions.put(Destination.Charleston, "892 439");
+		positions.put(Destination.Chicago, "700 275");
+		positions.put(Destination.Dallas, "568 532");
+		positions.put(Destination.Denver, "400 347");
+		positions.put(Destination.Duluth, "577 214");
+		positions.put(Destination.ElPaso, "386 555");
+		positions.put(Destination.Helena, "340 219");
+		positions.put(Destination.Houston, "608 507");
+		positions.put(Destination.KansasCity, "568 358");
+		positions.put(Destination.LasVegas, "213 453");
+		positions.put(Destination.LittleRock, "638 448");
+		positions.put(Destination.LosAngeles, "147 512");
+		positions.put(Destination.Miami, "925 596");
+		positions.put(Destination.Montreal, "896 82");
+		positions.put(Destination.Nashville, "748 397");
+		positions.put(Destination.NewOrleans, "702 559");
+		positions.put(Destination.NewYork, "915 215");
+		positions.put(Destination.OklahomaCity, "547 443");
+		positions.put(Destination.Omaha, "547 305");
+		positions.put(Destination.Phoenix, "268 518");
+		positions.put(Destination.Pittsburgh, "831 261");
+		positions.put(Destination.Portland, "85 211");
+		positions.put(Destination.Raleigh, "864 374");
+		positions.put(Destination.SaintLouis, "655 359");
+		positions.put(Destination.SaltLakeCity, "268 343");
+		positions.put(Destination.SanFrancisco, "69 407");
+		positions.put(Destination.SantaFe, "391 465");
+		positions.put(Destination.SaultStMarie, "708 148");
+		positions.put(Destination.Seattle, "106 158");
+		positions.put(Destination.Toronto, "814 169");
+		positions.put(Destination.Vancouver, "110 106");
+		positions.put(Destination.Washington, "923 307");
+		positions.put(Destination.Winnipeg, "465 99");
+
+		ArrayList<Route> path = new ArrayList<Route>();
+		ArrayList<Route> closedList = new ArrayList<Route>();
+		ArrayList<Destination> closedDestinationList = new ArrayList<Destination>();
+		int iterator = 0;
+		Route tempRoute = new Route(Destination.Washington, Destination.Washington, 6, TrainCardColor.yellow); // Routes.getInstance().getRoutes(startPoint,
+																												// endPoint).get(0);
+		Route tempRoute2 = new Route(Destination.Washington, Destination.Washington, 6, TrainCardColor.yellow); // Routes.getInstance().getRoutes(startPoint,
+																												// endPoint).get(0);
+		while (startPoint != endPoint) {
+			if (iterator == 200) {
+				return getMinCostPath(startPoint, endPoint);
+			}
+			iterator++;
+			ArrayList<Destination> currentNeighbors = Routes.getInstance().getNeighbors(startPoint);
+			int tempPoints = 0;
+
+			for (Destination neighbor : currentNeighbors) {
+				tempRoute = Routes.getInstance().getRoutes(startPoint, neighbor).get(0);
+				// System.out.println("the temp route: " + tempRoute + " with
+				// cost: " + tempRoute.getPoints());
+
+				// computations for the direction of travel
+				String startPosition = positions.get(startPoint);
+				String[] startCoordinates = startPosition.split("\\s+");
+				int startX = Integer.parseInt(startCoordinates[0]);
+				int startY = Integer.parseInt(startCoordinates[1]);
+
+				String neighborPosition = positions.get(neighbor);
+				String[] neighborCoordinates = neighborPosition.split("\\s+");
+				int neighborX = Integer.parseInt(neighborCoordinates[0]);
+				int neighborY = Integer.parseInt(neighborCoordinates[1]);
+
+				String endPosition = positions.get(endPoint);
+				String[] endCoordinates = endPosition.split("\\s+");
+				int endX = Integer.parseInt(endCoordinates[0]);
+				int endY = Integer.parseInt(endCoordinates[1]);
+
+				float destinationAngle = (float) Math.toDegrees(Math.atan2(startY - endY, startX - endX));
+				float neighborAngle = (float) Math.toDegrees(Math.atan2(startY - neighborY, startX - neighborX));
+
+				// System.out.println("Destination Angle: " + destinationAngle);
+				// System.out.println("Neighbor Angle: " + neighborAngle);
+				// System.out.println(neighborCoordinates[0] + " " +
+				// neighborCoordinates[1]);
+				float scanAngle = (float) 90.0;
+				if (tempRoute.getPoints() > tempPoints && !closedList.contains(tempRoute)
+						&& !closedDestinationList.contains(neighbor)
+						&& (Math.abs(destinationAngle - neighborAngle) < scanAngle)
+						&& isRouteNotOwnedByOtherPlayer(tempRoute)) {
+					tempPoints = tempRoute.getPoints();
+					// System.out.println("points: " + tempPoints);
+					// System.out.println("if called");
+					path.remove(tempRoute2);
+					// System.out.println("Removing route: " + tempRoute2);
+					path.add(tempRoute);
+					// System.out.println("Adding route: " + tempRoute);
+					// System.out.println("Temp Route 1: " + tempRoute);
+					// System.out.println("Temp Route 2: " + tempRoute2);
+					tempRoute2 = tempRoute;
+				} else {
+					// don't think this condition should be met
+					// path.remove(iterator);
+					// path.add(tempRoute);
+					// System.out.println("else called");
+				}
+			}
+			path.add(tempRoute2);
+			// System.out.println("Adding route: " + tempRoute2);
+
+			iterator++;
+			if (startPoint.equals(tempRoute2.getDest1())) {
+				startPoint = tempRoute2.getDest2();
+				closedList.add(tempRoute2);
+				closedDestinationList.add(startPoint);
+				// System.out.println("start point now dest2");
+			} else {
+				startPoint = tempRoute2.getDest1();
+				closedList.add(tempRoute2);
+				closedDestinationList.add(startPoint);
+				// System.out.println("start point now dest1");
+			}
+
+		}
+		path.remove(tempRoute2);
+		return path;
+	}
+}
