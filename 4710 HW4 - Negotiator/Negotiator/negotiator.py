@@ -30,6 +30,8 @@ class Negotiator(BaseNegotiator):
             return self.offer
 
 
+
+
 # Put into separate file when submitting
 class jw6dz(BaseNegotiator):
 
@@ -56,17 +58,18 @@ class jw6dz(BaseNegotiator):
         # print (self.iter_limit)
         self.offer = offer
 
-        self.compute_offer()
         # if we're initiating the offer
 
-        # if (offer is None):
+        if (offer is None):
+            self.offer = self.compute_offer()
+            return self.offer
 
 
         if random() < 0.2 and offer is not None:
             # Very important - we save the offer we're going to return as self.offer
-            print "I agree that you can take " + str(self.offer)
+            print "I, jw6dz, agree that you can take " + str(self.offer) ###IMPORTANT remove computing ID later
             self.offer = BaseNegotiator.set_diff(self)
-            print "I will take: " + str(self.offer)
+            print "I, jw6dz, will take: " + str(self.offer)
             return self.offer
         else:
             ordering = self.preferences
@@ -77,6 +80,7 @@ class jw6dz(BaseNegotiator):
             self.offer = ourOffer
             return self.offer
 
+
     def compute_offer(self):
         tempList = self.preferences
         sortedList = sorted(tempList.items(), key=operator.itemgetter(1))
@@ -85,9 +89,9 @@ class jw6dz(BaseNegotiator):
         goalVal = self.acceptance_rate * self.total_util;
         tempVal = 0
         for s in sortedList:
+            # print s
             if tempVal + s[1] <= int(goalVal+1):
-                returnList.append(s)
+                returnList.append(s[0])
                 tempVal += s[1]
-        print("temp value is" + str(tempVal))
-        print returnList
+        return returnList
 
