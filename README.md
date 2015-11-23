@@ -9,7 +9,10 @@ Robot Pathfinding using A* algorithm and then our own implementation when not gu
 Written in Java, received 6/10. Unknown maze does not work.
 
 ## Homework 3
-Implementation of Ticket to Ride game. The AI uses Markov Decision Process to handle what decision to make. Written in Java, grade not received. 
+Implementation of Ticket to Ride game. The AI uses Markov Decision Process to handle what decision to make. Written in Java, 6/10.  
+
+## Homework 4
+Negotiating with other agents over a set of items with utilities respective to the agents. Written in Python.
 
 ## Authors
 Kevin Qian (kq4hy@virginia.edu) & Jiayi Wang (jw6dz@virginia.edu)
