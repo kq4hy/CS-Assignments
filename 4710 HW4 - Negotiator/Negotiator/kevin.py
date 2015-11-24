@@ -1,10 +1,11 @@
 __author__ = 'lifereborn'
+__author__ = 'lifereborn'
 
 from negotiator_base import BaseNegotiator
 from random import random
 import operator
 
-class jw6dz_Negotiator(BaseNegotiator):
+class kevin_Negotiator(BaseNegotiator):
 
     # Override the make_offer method from BaseNegotiator to accept a given offer 20%
     # of the time, and return a random subset the rest of the time.
@@ -38,10 +39,9 @@ class jw6dz_Negotiator(BaseNegotiator):
 
         enemy_offer_util = self.compute_offer_util(offer)
         if enemy_offer_util >= self.acceptance_rate * self.compute_total_util():
-            self.offer = offer
-            print "I, jw6dz_Negotiator, agree that you can take " + str(self.offer)
+            print "I, kevin_Negotiator, agree that you can take " + str(self.offer)
             self.offer = BaseNegotiator.set_diff(self)
-            print "I, jw6dz_Negotiator, will take: " + str(self.offer)
+            print "I, kevin_Negotiator, will take: " + str(self.offer)
             return self.offer
 
 
@@ -61,7 +61,6 @@ class jw6dz_Negotiator(BaseNegotiator):
             calc_point = float(self.total_util) / float(num_occurences)
             for s in self.enemy_desires:
                 self.enemy_desires[s] = (self.enemy_desires.get(s)[0], self.enemy_desires.get(s)[0] * calc_point)
-            self.turn_number += 1
         else:
             num_occurences = 0
             for s in self.enemy_desires:
@@ -72,7 +71,7 @@ class jw6dz_Negotiator(BaseNegotiator):
             calc_point = float(self.total_util) / float(num_occurences)
             for s in self.enemy_desires:
                 self.enemy_desires[s] = (self.enemy_desires.get(s)[0], self.enemy_desires.get(s)[0] * calc_point)
-            # print "ENEMY DESIRES"
+        #     print "ENEMY DESIRES"
         # print self.enemy_desires
 
         # if it's the last turn, 50% (TBD) chance to reduce acceptance rate to 30%
@@ -81,9 +80,9 @@ class jw6dz_Negotiator(BaseNegotiator):
                 self.acceptance_rate = .3
             enemy_offer_util = self.compute_offer_util(offer)
             if enemy_offer_util >= self.acceptance_rate * self.compute_total_util():
-                print "I, jw6dz_Negotiator, agree that you can take " + str(self.offer)
+                print "I, kevin_Negotiator, agree that you can take " + str(self.offer)
                 self.offer = BaseNegotiator.set_diff(self)
-                print "I, jw6dz_Negotiator, will take: " + str(self.offer)
+                print "I, kevin_Negotiator, will take: " + str(self.offer)
                 return self.offer
 
 
@@ -104,7 +103,7 @@ class jw6dz_Negotiator(BaseNegotiator):
             lowest_enemy_desires.append((lowest_name, lowest_occu, lowest_util, self.preferences.get(lowest_name)))
         # print "LOWEST ENEMY DESIRES"
         # print lowest_enemy_desires
-        print "Min utility jw6dz wants this turn: " + str(goal_util)
+        print "Min utility kevin want this turn: " + str(goal_util)
 
         # merge sort
         to_sort = []
@@ -121,6 +120,8 @@ class jw6dz_Negotiator(BaseNegotiator):
 
         if len(holder) > 0:
             to_sort.append(holder)
+        # print "TO SORT:"
+        # print to_sort
 
         temp_list = []
         new_sorted_list = []
@@ -207,44 +208,3 @@ class jw6dz_Negotiator(BaseNegotiator):
         # IDEAS:
         # - if the opponent accepts the offer on the first turn (the initial offer), up the aceptance rate to 0.9 at the very least.
 
-
-
-
-
-        # new_sorted_list = lowest_enemy_desires
-
-        # after completion, sort lowest_enemy_desires such that same util's are sorted by our preferences G->L
-        # iter_count = 0
-        # inside_count = 1
-        # new_sorted_list = []
-        # initialized = False
-
-        # while iter_count <= len(lowest_enemy_desires):
-        #     temp_list = []
-        #     while inside_count <= len(lowest_enemy_desires):
-        #         if not initialized:
-        #             temp_list.append(lowest_enemy_desires[inside_count-1])
-        #             initialized = True
-        #             if iter_count >= len(lowest_enemy_desires):
-        #                 break
-        #             # if inside_count == len(lowest_enemy_desires):
-        #             #     iter_count += 1
-        #             #     break
-        #         else:
-        #             if inside_count >= len(lowest_enemy_desires):
-        #                 break
-        #             print "insidecount is " + str(inside_count)
-        #             if lowest_enemy_desires[inside_count][2] != lowest_enemy_desires[inside_count-1][2]:
-        #                 inside_count += 1
-        #                 initialized = False
-        #                 break
-        #             else:
-        #                 temp_list.append(lowest_enemy_desires[inside_count])
-        #                 inside_count += 1
-        #
-        #     temp_list = sorted(temp_list, key=operator.itemgetter(3), reverse=True) # sort temp_list G->L before adding to new_sorted_list
-        #     for t in temp_list:
-        #         new_sorted_list.append(t)
-        #     iter_count = inside_count
-        #     if iter_count >= len(lowest_enemy_desires): break
-        #     print "hi" + " " + str(inside_count) + str(iter_count)
