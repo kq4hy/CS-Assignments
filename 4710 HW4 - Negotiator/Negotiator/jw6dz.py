@@ -38,7 +38,6 @@ class jw6dz_Negotiator(BaseNegotiator):
 
         enemy_offer_util = self.compute_offer_util(offer)
         if enemy_offer_util >= self.acceptance_rate * self.compute_total_util():
-            self.offer = offer
             print "I, jw6dz_Negotiator, agree that you can take " + str(self.offer)
             self.offer = BaseNegotiator.set_diff(self)
             print "I, jw6dz_Negotiator, will take: " + str(self.offer)
@@ -134,6 +133,10 @@ class jw6dz_Negotiator(BaseNegotiator):
 
         # update lowest_enemy_desires with finalized sorted list
         lowest_enemy_desires = new_sorted_list
+
+        # if the enemy doesn't want anything... to counter the TypeError bug
+        if len(lowest_enemy_desires) == 0:
+            return list[self.preferences]
 
         temp_return_offer = []
         current_turn_util = 0
