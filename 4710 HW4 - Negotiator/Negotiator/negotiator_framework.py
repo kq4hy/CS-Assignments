@@ -3,7 +3,8 @@
 
 from csv import DictReader
 from sys import argv, exit
-from negotiator import Negotiator, jw6dz
+from negotiator import Negotiator
+from jw6dz import jw6dz
 from random import randint
 
 ##GUI Related Imports
