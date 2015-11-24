@@ -31,6 +31,8 @@ Because the original acceptance rate is relatively high (80%), it makes sense fo
 
 Since the AI knows which turn it is on and how many turns left, it is simple to take into consideration what should happen on the last turn. The consequence for not coming up with an agreement is extremely damaging to the agent's total number of points so it will do its best to come to an agreement. However, we also took into the consideration where if a player continually demands everything and we receive a utility of 0, then we should reject in those situations. Taking both of those into account, we decided to implement a feature where if no agreement has been reached by the end, there will be a 50% chance that the acceptance rate drops to 30%, thus giving the agent some leeway in terms of accepting an offer yet not being "bullied" too much. If the acceptance rate does not drop to 30%, then it will remain at 50%, which should be equal for both players. 
 
+There is also a feature in which the AI will choose not to add an item to its offer because by adding another item will bring the utility to something larger than the threshold. There is a 50% chance that the AI will not add the item on because for example, if the threshold is 6 utility and by adding on another item will cause the utility received that turn to become 8, then it does not make too much sense and most likely, the other agent will refuse the offer anyways. Thus, we set it so that there is a chance the threshold is never hit when computing a return offer. This will, however, sometimes cause the AI to jump up and down when offering to its opponent. 
+
 #### Testing
 ---
 
