@@ -8,6 +8,7 @@ class jw6dz_Negotiator(BaseNegotiator):
 
     # Override the make_offer method from BaseNegotiator to accept a given offer 20%
     # of the time, and return a random subset the rest of the time.
+    name = "jw6dz"
     desires_set_up = False
     enemy_desires = {}
     total_util = 0
@@ -17,6 +18,8 @@ class jw6dz_Negotiator(BaseNegotiator):
     did_opponent_raise = False  # did the opponent demand more this turn than the last turn?
     curr_opponent_util = None   # current opponent perceived utility
     opponent_util_list = []     # list of opponent utilities based on their offers continuous from multiple negotiations
+
+    # last_round_preferences = []
 
     def make_offer(self, offer):
         self.num_elements = len(self.preferences)
@@ -28,11 +31,10 @@ class jw6dz_Negotiator(BaseNegotiator):
                 self.total_util = self.compute_total_util()
                 for s in self.preferences:
                     self.enemy_desires[s] = (1, self.total_util/self.num_elements)
-
             # print "ENEMY DESIRES JUST INiTIATED: "
             # print self.enemy_desires
             self.offer = self.compute_offer()
-            print "THIS IS MY RETURN OFFER (when we initiate) turn:" + str(self.turn_number)
+            # print "THIS IS MY RETURN OFFER (when we initiate) turn:" + str(self.turn_number)
             print self.offer
             return self.offer
 
@@ -85,10 +87,12 @@ class jw6dz_Negotiator(BaseNegotiator):
                 print "I, jw6dz_Negotiator, will take: " + str(self.offer)
                 return self.offer
 
-
         # calculate the goal utility we want to reach with this offer
         goal_util = self.acceptance_rate * self.total_util
         enemy_desires_copy = self.enemy_desires.copy()
+        # print "COPY OF ENEMY DESIRES"
+        # print enemy_desires_copy
+
         lowest_enemy_desires = [] # list of tuples of (name, util)
         while len(enemy_desires_copy) > 0:  # Complete lowest_enemy_desires list
             lowest_util = float(1000)
@@ -103,7 +107,7 @@ class jw6dz_Negotiator(BaseNegotiator):
             lowest_enemy_desires.append((lowest_name, lowest_occu, lowest_util, self.preferences.get(lowest_name)))
         # print "LOWEST ENEMY DESIRES"
         # print lowest_enemy_desires
-        print "Min utility jw6dz wants this turn: " + str(goal_util)
+        # print "Min utility jw6dz wants this turn: " + str(goal_util)
 
         # merge sort
         to_sort = []
@@ -128,8 +132,8 @@ class jw6dz_Negotiator(BaseNegotiator):
             for t in temp_list:
                 new_sorted_list.append(t)
 
-        print "NEW SORTED LIST WITH 4-TUPLE"
-        print new_sorted_list
+        # print "NEW SORTED LIST WITH 4-TUPLE"
+        # print new_sorted_list
 
         # update lowest_enemy_desires with finalized sorted list
         lowest_enemy_desires = new_sorted_list
@@ -153,8 +157,8 @@ class jw6dz_Negotiator(BaseNegotiator):
                 temp_return_offer.append(lowest_enemy_desires[count][0])
 
             count += 1
-        print "THIS IS MY RETURN OFFER!!! for turn #" + str(self.turn_number)
-        print temp_return_offer
+        # print "THIS IS MY RETURN OFFER!!! for turn #" + str(self.turn_number)
+        # print temp_return_offer
 
         self.offer = temp_return_offer
         self.acceptance_rate -= .3 / self.iter_limit
@@ -206,7 +210,10 @@ class jw6dz_Negotiator(BaseNegotiator):
     def receive_results(self, results):
         self.acceptance_rate = 0.8  # reset acceptance rate
         self.turn_number = 0
-        # self.enemy_desires = {}
+        # self.last_round_preferences = set(self.preferences)
+        self.enemy_desires.clear()
+
+        # print self.enemy_desires
         # IDEAS:
         # - if the opponent accepts the offer on the first turn (the initial offer), up the aceptance rate to 0.9 at the very least.
 

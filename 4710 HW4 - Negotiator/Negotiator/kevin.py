@@ -204,7 +204,7 @@ class kevin_Negotiator(BaseNegotiator):
     def receive_results(self, results):
         self.acceptance_rate = 0.8  # reset acceptance rate
         self.turn_number = 0
-        # self.enemy_desires = {}
+        self.enemy_desires.clear()
         # IDEAS:
         # - if the opponent accepts the offer on the first turn (the initial offer), up the aceptance rate to 0.9 at the very least.
 
