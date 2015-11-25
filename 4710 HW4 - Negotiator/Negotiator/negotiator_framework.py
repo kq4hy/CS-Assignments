@@ -6,6 +6,7 @@ from sys import argv, exit
 from negotiator import Negotiator
 from jw6dz import jw6dz_Negotiator
 from kevin import kevin_Negotiator
+from drs5ma import StdIssue
 from random import randint
 
 ##GUI Related Imports
@@ -109,9 +110,9 @@ if __name__ == "__main__":
         exit(-42)
     score_a = score_b = 0
     # We will replace Negotiator here with <your id>_Negotiator, as specified in the Readme
-    negotiator_a = jw6dz_Negotiator()
+    negotiator_a = StdIssue()
     # negotiator_b = kevin_Negotiator()
-    negotiator_b = Negotiator()
+    negotiator_b = jw6dz_Negotiator()
     for scenario in argv[1:]:
         # Get the scenario parameters
         (num_iters, mapping) = read_scenario(scenario)
