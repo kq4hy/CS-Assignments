@@ -67,7 +67,7 @@ All sample sets were run three times overall with 4 for each time the set was ru
   - Round 3: 32, 28 (individual results include {7, 8}, {9, 6}, {7, 8}, {9, 6})
 2. sample_scenario2.csv (where player1 = Daniel Saha's and player2 = our's)
   - Round 1: 16, 36 (individual results include {4, 9}, {4, 9}, {4, 9}, {4, 9})
-  - Round 2: 24, 29 (individual results include {4, 9}, {7, 7}, {7, 7}, {6, 6})
+  - Round 2: 24, 29 (individual results include {4, 9}, {7, 7}, {6, 6}, {7, 7})
   - Round 3: 17, 32 (individual results include {4, 9}, {4, 9}, {5, 5}, {4, 9})
 3. test1.csv (where player1 = our's and player2 = Daniel Saha's)
   - Round 1: 39, 29 (individual results include {13, 7}, {12, 8}, {7, 7}, {7, 7})
