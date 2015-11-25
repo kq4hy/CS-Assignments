@@ -35,7 +35,47 @@ There is also a feature in which the AI will choose not to add an item to its of
 
 #### Testing
 ---
+In class, we ran our AI against several other bots that other students had created and the results were as follows: 
+- DecreasingIntelligent: 521
+- DecreasingStubborn: 522
+- jr3fs (Joo Ro): 526
+- ConstantStubborn: 376
+- ConstantReasonable: 410
+- ConstantSoftie: 455
+- Tricky: 379
+- **jw6dz: 481**
+- yn9sa: 533
+- daniel/upal saha: 360
+- LilBullystin: 378
+- DA BEST ONE: 261
 
+If you sorted the list by the number of points, our agent would have been in 5th place out of the 12 agents. We were not given explicit information on the test cases that the agents were run against but Joo (the person who ran the test suite and sent us the data), said there were over 50 test cases which is why the points are so high. Based on the names of some of the AIs, some inferences can be made. Surprisingly, our AI does not do as well as DecreasingIntelligent and DecreasingStubborn. Assuming the robots perform similarly as their name indicates, our AI may not perform as well on agents that do not converge to a 50%. Although this may seem counterintuitive, placing ourselves before others and not hitting a 50% threshold by the end may boost our points by a little bit. However, if the threshold is set too high, there is also the possibility of becoming like ConstantStubborn or ConstantReasonable. 
+
+Another agent that we tested against was Daniel Saha + group's agent. The first sample set we used was sample_scenario.csv that was provided but changed the number of turns to 8. The second sample set we used was sample_scenario.csv that was provided but changed the number of turns to 5. The third sample set we used was a created set with the following data:
+- 6
+- SPKids, 4, 5
+- Sleep, 3, 2
+- GPA, 2, 4
+- Coffee, 1, 2
+- Break 8, 5
+
+All sample sets were run three times overall with 4 for each time the set was run. So, the command was similar to `python negotiator_framework.py set1.csv set1.csv set1.csv set1.csv`. The results were as follows:
+
+1. sample_scenario.csv (where player1 = our's and player2 = Daniel Saha's)
+  - Round 1: 34, 26 (individual results include {9, 6}, {9, 6}, {9, 6}, {7, 8})
+  - Round 2: 17, 18 (individual results include {6, 9}, {-5, -5}, {7, 8}, {9, 6})
+  - Round 3: 32, 28 (individual results include {7, 8}, {9, 6}, {7, 8}, {9, 6})
+2. sample_scenario2.csv (where player1 = Daniel Saha's and player2 = our's)
+  - Round 1: 16, 36 (individual results include {4, 9}, {4, 9}, {4, 9}, {4, 9})
+  - Round 2: 24, 29 (individual results include {4, 9}, {7, 7}, {7, 7}, {6, 6})
+  - Round 3: 17, 32 (individual results include {4, 9}, {4, 9}, {5, 5}, {4, 9})
+3. test1.csv (where player1 = our's and player2 = Daniel Saha's)
+  - Round 1: 39, 29 (individual results include {13, 7}, {12, 8}, {7, 7}, {7, 7})
+  - Round 2: 40, 35 (individual results include {8, 9}, {12, 8}, {9, 7}, {11, 11})
+  - Round 3: 34, 39 (individual results include {10, 9}, {12, 8}, {12, 8}, {4, 13})
+
+Overall, the results indicate that both of our agents are relatively equal although it does seem that our agent does negotiate a little bit better because only 2/9 of the rounds did our agent lose and they were not as drastic as the other's losses. Because we take into consideration what the opponent wants by keeping track of their demands, our agent is able to work around it and demand the things that are worth less to the other player. Originally, we though that by removing the drastic drop in threshold to 30% would improve our performance and in some circumstances it did. In the instances that our agent won, it would win by a larger percentage but if negotiations went wrong, then there would be significant point loss. The only situation that would allow for removing the 30% threshold to work would be in a situation where everyone else drops their threshold thus allowing us to take more points. 
 
 #### Conclusions
 ---
+Overall, our AI does relatively well when placed against other AIs. The algorithm we implemented uses perceived utility based on how many times the other player asks for a certain item. By using that information, our agent is able to work around their preferences and provide an offer that will be more likely agreeable. Furthermore, because the threshold is dropping at a constant rate to 50%, our AI is fair in that by the last turn, we would expect to receive 50% of the total utility. There are instances in which our AI will receive less than half but overall, that point difference is still a gain when compared to if no agreement is reached. However, there are still areas in which our agent can be stricter or more "bully"-like which may or may not result in more points as slightly mentioned above. 
