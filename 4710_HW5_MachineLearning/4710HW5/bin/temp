@@ -1,0 +1,471 @@
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeSet;
+
+//as of 9:19pm 12/5
+public class jw6dz extends Classifier {
+	
+	public double curr_Entropy = 0;
+	public Choice the_choice;
+	public int num_data = 0; //number of elements in the training set
+	public List<String> names_info;
+	public List<String> information;
+	
+	public jw6dz(String namesFilePath) {
+		super(namesFilePath);
+		try {
+			this.names_info = Files.readAllLines(Paths.get(namesFilePath));
+			String[] choices = names_info.get(0).split("\\s+");
+			this.the_choice = new Choice(choices);
+			for (int i = 2; i < names_info.size(); i++) {
+				String[] line = names_info.get(i).split("\\s+");
+				String f_name = line[0];
+				Feature temp;
+				if (line[1].equals("numeric")) {
+					temp = new Feature(f_name);
+				}
+				else {
+					temp = new Feature(f_name, line);
+				}
+				this.the_choice.addFeature(temp);
+			}
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void train(String trainingDataFilpath) {
+		try {
+			this.information = Files.readAllLines(Paths.get(trainingDataFilpath));
+			System.out.println("The file " + trainingDataFilpath + " contains " + information.size() + " lines.");
+			this.num_data = information.size();
+			for (int i = 0; i < information.size(); i++) {
+				String[] choices = information.get(i).split("\\s+");
+				String line_result = choices[choices.length-1];
+//				System.out.println(line_result);
+				int index = 0;
+				for (int z = 0; z < this.the_choice.all_choices.length; z++) {
+					if (this.the_choice.all_choices[z].equals(line_result)) {
+						index = z;
+						this.the_choice.nums_each_choice[index]++;
+						break;
+					}
+				}
+				//fit all data in to respective features
+				for(int j = 0; j < choices.length - 1; j++) { //for each number/stat in the line //******* -1
+//					System.out.println(this.all_choices.get(index).features.size());
+					if (this.the_choice.features.get(j).isNumeric) { //if feature is numeric
+						if (this.the_choice.features.get(j).levels.containsKey(choices[j])) 
+							this.the_choice.features.get(j).levels.get(choices[j]).set(index, this.the_choice.features.get(j).levels.get(choices[j]).get(index) + 1);
+						else {
+							this.the_choice.features.get(j).createLevel(choices[j]);
+							this.the_choice.features.get(j).levels.get(choices[j]).set(index, this.the_choice.features.get(j).levels.get(choices[j]).get(index) + 1);
+						}
+					}
+					else { //if feature isn't numeric
+						this.the_choice.features.get(j).levels.get(choices[j]).set(index, this.the_choice.features.get(j).levels.get(choices[j]).get(index) + 1);
+					}
+				}
+			}
+			//calculate current system entropy
+			this.curr_Entropy = this.the_choice.calc_entropy();
+			
+			//calculate and input entropy levels
+			for (Feature f: this.the_choice.features) {
+				for (Entry<String, ArrayList<Double>> entry : f.levels.entrySet()) {
+				    String key = entry.getKey();
+				    ArrayList<Double> value = entry.getValue();
+				    value.set(2, calc_entropy(value.get(0), value.get(1)));
+				}
+			}
+			//calculate gain for each Feature
+			for (Feature f: this.the_choice.features) {
+				f.gain = calc_gain(this.curr_Entropy, f, this.num_data);
+			}
+			//sort greatest gain to least gain
+			Collections.sort(this.the_choice.features, new Comparator<Feature>() { 
+			    @Override
+			    public int compare(Feature f1, Feature f2) {
+			        if (f1.gain > f2.gain)
+			            return -1;
+			        if (f1.gain < f2.gain)
+			            return 1;
+			        return 0;
+			    }
+			});
+			System.out.println("Building a new FNode (root), max gain is from " + this.the_choice.features.get(0).name + " and is " + this.the_choice.features.get(0).gain);
+			FNode root = new FNode(this.the_choice.features.get(0), this.names_info, this.information);
+//			System.out.print(root.toString());
+		}
+		catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void makePredictions(String testDataFilepath) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	//log 2
+	public static double log2(double x) {
+		return Math.log(x)/ Math.log(2);
+	}
+	
+	public static double calc_entropy(double pos, double neg) {
+		double total = pos + neg;
+		if (pos == 0.0 || neg == 0.0) 
+			return 0.0;
+		return -1 * pos/total * log2(pos/total) - neg/total * log2(neg/total);
+	}
+ 
+	public static double calc_gain(double curr_e, Feature f, int total_num) {
+		double result = curr_e;
+		if (total_num == 0) //***
+			return 0.0;
+		for (Entry<String, ArrayList<Double>> entry : f.levels.entrySet()) {
+		    ArrayList<Double> value = entry.getValue();
+		    result = result - (value.get(0) + value.get(1)) / (double)total_num * value.get(2);
+		}
+		return result;
+	}
+	
+	public static String[][] convert_to_matrix(List<String> info, int num_features) {
+		String[][] toreturn = new String[info.size()][num_features];
+		for (int i = 0; i < info.size(); i++) {
+			String[] choices = info.get(i).split("\\s+");
+			for (int j = 0; j < choices.length; j++)
+				toreturn[i][j] = choices[j];
+		}
+		return toreturn;
+	}
+	
+//////////////////////////////////////////////////////////////////////////////////////////
+	public class Feature {
+		public String name;
+		public double gain = 0.0;
+		public boolean isNumeric;
+		public HashMap<String, ArrayList<Double>> levels = new HashMap<String, ArrayList<Double>>();
+		
+		//Non-Numeric Feature
+		public Feature(String n, String[] choices) {
+			this.name = n;
+			this.isNumeric = false;
+			//Initiate Levels dictionary with the options of the Feature
+			for (int i = 1; i < choices.length; i++) {
+				createLevel(choices[i]);
+			}
+		}
+		//Numeric Feature
+		public Feature(String n) {
+			this.name = n;
+			this.isNumeric = true;
+		}
+		
+		public void createLevel(String n) {
+			ArrayList<Double> tempA = new ArrayList<Double>();
+			tempA.add(0.0);
+			tempA.add(0.0);
+			tempA.add(0.0);
+			this.levels.put(n, tempA);
+		}
+		
+		public String toString() {
+			String toReturn = this.name + ": \r\n" + "Gain: " + this.gain + "\r\n";
+			for (Entry<String, ArrayList<Double>> entry : this.levels.entrySet()) {
+			    String key = entry.getKey();
+			    ArrayList<Double> value = entry.getValue();
+			    toReturn += "\t";
+			    toReturn += key + ": ";
+			    for (Double d: value) {
+			    	toReturn += d.toString() + " ";
+			    }
+			    toReturn += "\r\n";
+			}
+			return toReturn;
+		}
+	}
+//////////////////////////////////////////////////////////////////////////////////////////
+	public class Choice {
+		public String value;
+		public ArrayList<Feature> features;
+		public String[] all_choices;
+		public Integer[] nums_each_choice;
+		
+		public Choice(String v) {
+			this.value = v;
+			this.features = new ArrayList<Feature>();
+		}
+		
+		public Choice(String[] choices) {
+			this.all_choices = choices;
+			this.nums_each_choice = new Integer[choices.length];
+			this.features = new ArrayList<Feature>();
+			for (int i = 0; i < this.all_choices.length; i++) {
+				this.nums_each_choice[i] = 0;
+			}
+		}
+		
+		public String toString() {
+			String toReturn = "*********************************NEW CHOICE?*********************************\r\n Options: ";
+			for (int i = 0; i < this.all_choices.length; i++) {
+				toReturn += this.all_choices[i] + ": " + this.nums_each_choice[i].toString() + " ";
+			}
+			toReturn += "\r\n" + "\r\n";
+			for (Feature f: this.features) {
+				toReturn += f.toString() + "\r\n";
+			}
+			return toReturn;
+		}
+		
+		public void addFeature(Feature f) {
+			this.features.add(f);
+		}
+		
+		public double calc_entropy() {
+			double total = this.nums_each_choice[0] + this.nums_each_choice[1];
+			if (this.nums_each_choice[0] == 0.0 || this.nums_each_choice[1] == 0.0) 
+				return 0.0;
+			return -1 * this.nums_each_choice[0]/total * log2(this.nums_each_choice[0]/total) - this.nums_each_choice[1]/total * log2(this.nums_each_choice[1]/total);
+		}
+	}
+
+//////////////////////////////////////////////////////////////////////////////////////////
+	public abstract class Node {
+		public ArrayList<Node> children;
+		public String name;
+		public int total_num;
+		public List<String> relevant_lines;
+	}
+//////////////////////////////////////////////////////////////////////////////////////////
+	//Feature Node
+	public class FNode extends jw6dz.Node {
+		public List<String> names;
+		public int feature_index;
+		public FNode(Feature f, List<String> names_info, List<String> info) {
+			
+			this.name = f.name;
+						
+			this.names = names_info;
+			this.children = new ArrayList<Node>();
+			this.feature_index = -1;
+			this.relevant_lines = info;
+			
+			findFeatureIndex(this.name, info);
+			//make a new SNode for each level
+			trimNamesListByFeature(this.name, info);
+			for (String s: f.levels.keySet()) {
+//				System.out.println("CREATING SNODE");
+				System.out.println("Building a new SNode " + s + " from FNode " + this.name);
+				SNode temp = new SNode(s, this.names, trimListByFeature(createSubList(s, this.feature_index)));
+				this.children.add(temp);
+//				System.out.println(temp.toString());
+			}		
+		}
+		
+		public void findFeatureIndex(String name, List<String> info) {
+			int index;
+//			System.out.println("the name of the feature w're looking for is: " + name);
+			for (index = 2; index < this.names.size(); index++) {
+				String[] choices = this.names.get(index).split("\\s+");
+				if (choices[0].equals(name)) {
+					this.feature_index = index;
+					break;
+				}
+			}
+			System.out.println("The feature index is: " + this.feature_index);
+		}
+		public void trimNamesListByFeature(String name, List<String> info) {
+			this.names.remove(this.feature_index);
+		}
+		
+		public List<String> trimListByFeature(List<String> info) {
+			int index = this.feature_index - 2;
+			List<String> modifiedList = new ArrayList<String>();
+			for (int i = 0; i < info.size(); i++) {
+				String[] choices = info.get(i).split("\\s+");
+				choices[index] = "";
+				String putbackin = "";
+				for(String s: choices) {
+					putbackin += s + " ";
+				}
+				putbackin += "\r\n";
+//				System.out.print(putbackin);
+				modifiedList.add(putbackin);
+			}
+			return modifiedList;
+		}
+		
+		public List<String> createSubList(String s, int index) {
+			ArrayList<String> returnList = new ArrayList<String>();
+			for (String line: this.relevant_lines) {
+				String[] choices = line.split("\\s+");
+				if (choices[index-2].equals(s))
+					returnList.add(line);
+			}
+			return returnList;
+		}
+		
+		public String toString() {
+			String returnS = "";
+			for(Node s: this.children) {
+				returnS += s.toString() + "\r\n";
+			}
+			return returnS;
+		}
+	}
+	
+//////////////////////////////////////////////////////////////////////////////////////////
+	//Sub-feature Node
+	//has only one child, a feature Node
+	public class SNode extends jw6dz.Node {
+		public double entropy;
+		public Choice the_choice;
+		public int num_data;
+		public Feature chosen_one;
+		public List<String> names;
+		
+		public SNode(String n, List<String> names, List<String> info) {
+			this.name = n;
+			this.names = names;
+			this.relevant_lines = info;
+			this.children = new ArrayList<Node>();
+			this.initiateSNode(); //initiates the chosen_one feature that carries on the blood line
+			
+			System.out.println("SNode " + n + " was built");
+			//FNode next = new FNode(this.chosen_one, this.names, this.relevant_lines);
+//			this.children.add(new FNode(chosen_one, this.names, this.relevant_lines));
+		}
+		
+		public void initiateSNode() {
+			String[] ichoices = this.names.get(0).split("\\s+");
+			this.the_choice = new Choice(ichoices);
+			for (int i = 2; i < this.names.size(); i++) {
+				String[] line = this.names.get(i).split("\\s+");
+				String f_name = line[0];
+				Feature temp;
+				if (line[1].equals("numeric")) {
+					temp = new Feature(f_name);
+				}
+				else {
+					temp = new Feature(f_name, line);
+				}
+				this.the_choice.addFeature(temp);
+			}
+			//////////////////////////
+			this.num_data = relevant_lines.size();
+			System.out.println("Current total Lines of info: " + this.num_data);
+
+			for (int i = 0; i < relevant_lines.size(); i++) {
+				String[] choices = relevant_lines.get(i).trim().split("\\s+");
+				String line_result = choices[choices.length-1];
+				int index = 0;
+				for (int z = 0; z < this.the_choice.all_choices.length; z++) {
+					if (this.the_choice.all_choices[z].equals(line_result)) {
+						index = z;
+						this.the_choice.nums_each_choice[index]++;
+						break;
+					}
+				}
+				//fit all data in to respective features
+//				System.out.println("Current Names: " + this.names.toString());
+				String ts = "";
+				for (Feature e: this.the_choice.features) { ts += e.name + " "; }
+				System.out.println("Current Features: " + ts);
+				for(int j = 0; j < choices.length - 1; j++) { //for each number/stat in the line //******* -1
+//					System.out.println(this.all_choices.get(index).features.size());
+					if (this.the_choice.features.get(j).isNumeric) { //if feature is numeric
+						System.out.print(choices[j] + ": "+ this.the_choice.features.get(j).name + " ");
+						if (this.the_choice.features.get(j).levels.containsKey(choices[j])) 
+							this.the_choice.features.get(j).levels.get(choices[j]).set(index, this.the_choice.features.get(j).levels.get(choices[j]).get(index) + 1);
+						else {
+							this.the_choice.features.get(j).createLevel(choices[j]);
+							this.the_choice.features.get(j).levels.get(choices[j]).set(index, this.the_choice.features.get(j).levels.get(choices[j]).get(index) + 1);
+						}
+					}
+					else { //if feature isn't numeric
+						if (this.the_choice.features.get(j).levels.size() > 0) { 
+//							System.out.println("hi! " + index);
+//							System.out.println("hi! " + this.relevant_lines.get(i));
+							System.out.print( choices[j] + ": "+ this.the_choice.features.get(j).name + " ");
+							System.out.println("HISADFKLDSJFDSALKJFAS " + this.the_choice.features.get(j).name);
+							System.out.println(relevant_lines.get(i));
+							System.out.println(choices[0]);
+							double tempf = this.the_choice.features.get(j).levels.get(choices[j]).get(index);
+							this.the_choice.features.get(j).levels.get(choices[j]).set(index, this.the_choice.features.get(j).levels.get(choices[j]).get(index) + 1);
+						}
+					}
+				}
+			}
+			//calculate current system entropy
+			this.entropy = this.the_choice.calc_entropy();
+			
+			//calculate and input entropy levels
+			for (Feature f: this.the_choice.features) {
+				for (Entry<String, ArrayList<Double>> entry : f.levels.entrySet()) {
+				    String key = entry.getKey();
+				    ArrayList<Double> value = entry.getValue();
+				    value.set(2, calc_entropy(value.get(0), value.get(1)));
+				}
+			}
+			//calculate gain for each Feature
+			for (Feature f: this.the_choice.features) {
+				f.gain = calc_gain(this.entropy, f, this.num_data);
+			}
+			//sort greatest gain to least gain
+			Collections.sort(this.the_choice.features, new Comparator<Feature>() { 
+			    @Override
+			    public int compare(Feature f1, Feature f2) {
+			        if (f1.gain > f2.gain)
+			            return -1;
+			        if (f1.gain < f2.gain)
+			            return 1;
+			        return 0;
+			    }
+			});
+			
+			chosen_one = this.the_choice.features.get(0);
+			// if chosen_one's gain is 0, then we reached a termination node
+			if (chosen_one.gain != 0.0) {
+				System.out.println("Building a new FNode, max gain is from " + this.chosen_one.name + " and is " + this.chosen_one.gain);
+				this.children.add(new FNode(chosen_one, this.names, this.relevant_lines));
+			}
+			else {
+				System.out.println("The Gain is 0 so not building a new FNode " + chosen_one.name);
+				this.children.add(null);
+			}
+			//System.out.println(this.the_choice.toString());
+		}
+		
+		public String toString() {
+			String ret = "SNode: " + this.name + "\r\n" + "\t" + "Feature with max gain: " + chosen_one.name + " with " + chosen_one.gain + " gain.";
+//			for(String l: this.relevant_lines) {
+//				ret += l;
+//			}
+			return ret;
+		}
+	}
+	
+	public static void main(String[] args) {
+		jw6dz hi = new jw6dz("src/census.names");
+		hi.train("src/100training");
+		//System.out.println(hi.the_choice.toString());
+		
+	}
+	
+}
