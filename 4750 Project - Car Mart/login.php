@@ -5,6 +5,7 @@
 ?>
 
 <title>Log In</title>
+</br></br>
 <h3><center>Car Mart</center></h3>
 <center>Please enter your user name and password. </br></br>
   <form action = "process_login.php" method = "POST">

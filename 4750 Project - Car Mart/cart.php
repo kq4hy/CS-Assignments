@@ -1,4 +1,5 @@
 <title>Cart</title>
+</br></br>
 <h3><center>Cart Information</center></h3>
 <center>Below contains information regarding past purchases and your current cart.</br>
 You can purchase a car from here!</br></br>

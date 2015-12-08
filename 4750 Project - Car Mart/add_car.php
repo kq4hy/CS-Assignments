@@ -1,4 +1,5 @@
 <title>Car Information</title>
+</br></br>
 <h3><center>Car Information</center></h3>
 <center>Please view the information below regarding the car you just clicked.</br>
 Feel free to contact the seller or add this car to your cart. </br></br>

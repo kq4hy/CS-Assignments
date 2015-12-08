@@ -1,4 +1,5 @@
 <title>Buyer Main Page</title>
+</br></br>
 
 <?php
   session_start();
