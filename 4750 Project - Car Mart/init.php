@@ -11,6 +11,8 @@
 	$db -> query("drop table if exists is_seller") or die("Invalid: " . $db -> error);
 	$db -> query("drop table if exists owns") or die("Invalid: " . $db -> error);
 	$db -> query("drop table if exists has") or die("Invalid: " . $db -> error);
+	$db -> query("drop table if exists contains") or die("Invalid: " . $db -> error);
+	$db -> query("drop table if exists has_cars") or die("Invalid: " . $db -> error);
 	$db -> query("drop table if exists users") or die("Invalid: " . $db -> error);
 	$db -> query("drop table if exists sellers") or die("Invalid: " . $db -> error);
 	$db -> query("drop table if exists buyers") or die("Invalid: " . $db -> error);
@@ -37,7 +39,7 @@
 
 	//create INVENTORY table
 	$db -> query("create table inventory(inv_id int primary key not null, price int not null,
-	bought boolean not null, car_condition text not null)") or die("Invalid inventory: " . $db -> error);
+	bought boolean not null, car_condition text not null, comments text not null)") or die("Invalid inventory: " . $db -> error);
 
 	//create CART table
 	$db -> query("create table cart(cart_id int primary key not null, current boolean not null,
@@ -61,6 +63,16 @@
 	//create HAS table
 	$db -> query("create table has(user_id int not null, cart_id int not null,
 	primary key(user_id, cart_id), foreign key(user_id) references buyers(user_id) on delete cascade,
+	foreign key(cart_id) references cart(cart_id) on delete cascade) engine=innodb") or die("Invalid has: " . $db -> error);
+
+	//create CONTAINS table
+	$db -> query("create table contains(inv_id int not null, car_id int not null,
+	primary key(inv_id, car_id), foreign key(inv_id) references inventory(inv_id) on delete cascade,
+	foreign key(car_id) references cars(car_id) on delete cascade) engine=innodb") or die("Invalid has: " . $db -> error);
+
+	//create HAS_CARS table
+	$db -> query("create table has_cars(inv_id int not null, cart_id int not null,
+	primary key(inv_id, cart_id), foreign key(inv_id) references inventory(inv_id) on delete cascade,
 	foreign key(cart_id) references cart(cart_id) on delete cascade) engine=innodb") or die("Invalid has: " . $db -> error);
 
 	$user_file = file('users.txt');

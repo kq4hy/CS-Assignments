@@ -37,6 +37,37 @@
       create_table();
     }
   } ?>
+
+  <h3><center>Car Inventory</center></h3>
+  <table width = 85% id = "table" align = center border = "1">
+    <tr align = center>
+      <th width = 10%>ID</th>
+      <th width = 30%>Price</th>
+      <th width = 30%>Condition</th>
+      <th width = 30%>Bought</th>
+    </tr>
+
+    <?php
+    $result = $db -> query("select inv_id, price, car_condition,
+    bought from inventory natural join owns where user_id = '$curr_id'") or die("Invalid: " . $db -> error);
+    $num_rows = $result -> num_rows;
+  	$row = $result -> fetch_array();
+  	$num_fields = sizeof($row);
+  	for ($row_num = 0; $row_num < $num_rows; $row_num++) {
+  		reset($row); ?>
+  		<tr align = 'center'>
+        <td><a "location . href = 'edit_car.php?var=<?php echo $row[0] ?>'"><?php echo $row[0] ?></td>
+        <td>$<?php echo $row[1] ?></td>
+        <td><?php echo $row[2] ?></td>
+  		  <?php if($row[3] == 0)
+          echo "<td>Not yet bought</td>";
+        else if($row[3] == 1)
+          echo "<td>Sold!</td>";
+  	  echo "</tr>";
+  		$row = $result -> fetch_array();
+    } ?>
+  </table></br></br>
+
   <form action = "login.php"><center>
     <input type = "submit" value = "Log Out">
   </center></form>
@@ -49,8 +80,7 @@
       <tr align = center>
         <th width = 25%><a "location . href = 'sell_page.php'">Sell</th>
         <th width = 25%><a "location . href = 'profile.php?var=seller'">Profile</th>
-        <th width = 25%><a "location . href = 'inventory.php'">Inventory</th>
       </tr>
-    </table></br></br>
+    </table>
   <?php }
 ?>

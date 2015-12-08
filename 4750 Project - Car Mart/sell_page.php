@@ -1,0 +1,21 @@
+<title>Sell Your Car</title>
+<h3><center>Sell Your Car</center></h3>
+<center>Please fill in the information below to put your car up for sale! </br>
+Please note that your car will automatically be associated to your dealership if there is one. </br></br>
+
+<form action = "process_sell.php" method = "POST">
+  Make: <input type = "text" name = "make" size = "20"></br></br>
+  Model: <input type = "text" name = "model" size = "20"></br></br>
+  Year: <input type = "text" name = "year" size = "20"></br></br>
+  Total Mileage: <input type = "text" name = "mileage" size = "10">miles</br></br>
+  Miles Per Gallon (mpg) in City: <input type = "text" name = "mpg_city" size = "10">miles</br></br>
+  Miles Per Gallon (mpg) on Highway: <input type = "text" name = "mpg_highway" size = "10">miles</br></br>
+  Condition: <input type = "text" name = "condition" size = "20"></br></br>
+  Price: $<input type = "text" name = "price" size = "10"></br></br>
+  Additional Comments: </br><textarea name = "comments" cols = "50" rows = "5"></textarea></br></br>
+  <input type = "submit" name = "sell" value = "Post Listing">
+</form>
+
+<form action = "seller_main.php">
+  <input type = "submit" value = "Go Back">
+</form></center>

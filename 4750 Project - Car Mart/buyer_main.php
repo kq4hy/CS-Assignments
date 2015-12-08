@@ -47,6 +47,7 @@
       create_table();
     }
   } ?>
+  
   <form action = "login.php"><center>
     <input type = "submit" value = "Log Out">
   </center></form>
