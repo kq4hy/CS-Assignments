@@ -15,17 +15,21 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 
+//authors: jw6dz and kq4hy
 public class jw6dz extends Classifier {
 	
 	public double curr_Entropy = 0;
 	public Choice the_choice;
 	public int num_data = 0; //number of elements in the training set
 	public List<String> names_info;
+	public List<String> numeric_feature_names = new ArrayList<String>();
 	public List<String> information;
 	public FNode theStart;
+	public List<FNode> initialFNodes = new ArrayList<FNode>();
+	public int iF_index = 1;
 	public List<String> features_list = new ArrayList<String>();
 	public int FNodes = 0; int SNodes = 0; int TNodes = 0;
-	
+		
 	public jw6dz(String namesFilePath) {
 		super(namesFilePath);
 		try {
@@ -38,10 +42,11 @@ public class jw6dz extends Classifier {
 				this.features_list.add(f_name);
 				Feature temp;
 				if (line[1].equals("numeric")) {
-					temp = new Feature(f_name);
+					temp = new Feature(f_name, choices.length);
+					numeric_feature_names.add(f_name);
 				}
 				else {
-					temp = new Feature(f_name, line);
+					temp = new Feature(f_name, line, choices.length);
 				}
 				this.the_choice.addFeature(temp);
 			}
@@ -55,8 +60,12 @@ public class jw6dz extends Classifier {
 	public void train(String trainingDataFilpath) {
 		try {
 			this.information = Files.readAllLines(Paths.get(trainingDataFilpath));
-			System.out.println("The file " + trainingDataFilpath + " contains " + information.size() + " lines.");
+//			System.out.println("The file " + trainingDataFilpath + " contains " + information.size() + " lines.");
 			this.num_data = information.size();
+			if (this.num_data < 1) {
+				System.out.println("There's no data in the file!!");
+				System.exit(0);
+			}
 			for (int i = 0; i < information.size(); i++) {
 				String[] choices = information.get(i).split("\\s+");
 				String line_result = choices[choices.length-1];
@@ -91,15 +100,16 @@ public class jw6dz extends Classifier {
 			//calculate and input entropy levels
 			for (Feature f: this.the_choice.features) {
 				for (Entry<String, ArrayList<Double>> entry : f.levels.entrySet()) {
-				    String key = entry.getKey();
 				    ArrayList<Double> value = entry.getValue();
 				    value.set(2, calc_entropy(value.get(0), value.get(1)));
 				}
 			}
+			
 			//calculate gain for each Feature
 			for (Feature f: this.the_choice.features) {
 				f.gain = calc_gain(this.curr_Entropy, f, this.num_data);
 			}
+			
 			//sort greatest gain to least gain
 			Collections.sort(this.the_choice.features, new Comparator<Feature>() { 
 			    @Override
@@ -116,12 +126,10 @@ public class jw6dz extends Classifier {
 			ArrayList<Integer> vi = new ArrayList<Integer>();
 			for (int i = 0; i < this.names_info.size() - 2; i++) 
 				vi.add(i);
+			
 			this.theStart = new FNode(this.information, vi, this.the_choice.features.get(0), null);
-//			this.base.root = root;
-//			System.out.println("Building a new FNode (root), max gain is from " + this.the_choice.features.get(0).name + " and is " + this.the_choice.features.get(0).gain);
-//			FNode root = new FNode(this.the_choice.features.get(0), this.names_info, this.information);
-//			System.out.print(root.toString());
-			System.out.println("FNodes#: " + FNodes + " SNodes#: " + SNodes + " TNodes#: " + TNodes);
+			
+//			System.out.println("FNodes#: " + FNodes + " SNodes#: " + SNodes + " TNodes#: " + TNodes);
 		}
 		catch (IOException e) {
 			e.printStackTrace();
@@ -130,7 +138,7 @@ public class jw6dz extends Classifier {
 
 	@Override
 	public void makePredictions(String testDataFilepath) {
-		System.out.println("#$@$!@$!@#@!#!@$@!#@!$@!#@!@!#!@@!#!@$@$!@#");
+//		System.out.println("#$@$!@$!@#@!#!@$@!Make Predictions Starts Here#@!$@!#@!@!#!@@!#!@$@$!@#");
 		double total_correct = 0;
 		double total_lines = 0;
 		try {
@@ -152,16 +160,13 @@ public class jw6dz extends Classifier {
 					if (curr_node.type == "FNode") {
 						curr_feature_name = curr_node.name;
 						String val = values.get(curr_node.name);
-//						System.out.println("Stuck in FNode loop val:" + val);
 						int difference = 99999;
 						boolean found = false;
 						Node tempNode = null;
 						for (Node n: curr_node.children) {
 //							System.out.println(n.name + " " + val);
-							//hardcoded for now
-							if (curr_feature_name.equals("age") || curr_feature_name.equals("education-num") 
-									|| curr_feature_name.equals("capital-gain") || curr_feature_name.equals("capital-loss") 
-									|| curr_feature_name.equals("hours-per-week")) {
+							if (this.numeric_feature_names.contains(curr_feature_name)) { //If feature is numeric
+							/////////COMPLICATED NEW FEATURE////////////////
 								int tempD = Math.abs(Integer.parseInt(val)- Integer.parseInt(n.name));
 //								System.out.println("tempD: " + tempD);
 								if (Integer.parseInt(val) == Integer.parseInt(n.name)) {
@@ -172,7 +177,10 @@ public class jw6dz extends Classifier {
 								if (tempD < difference) {
 									difference = tempD;
 									tempNode = n;
+//									System.out.println("hi");
+//									tempNode = new TNode(n.name, 1, false);
 								}
+							/////////COMPLICATED NEW FEATURE////////////////
 							}
 							else {
 								if (n.name.equals(val)) {
@@ -198,48 +206,43 @@ public class jw6dz extends Classifier {
 							int difference = 99999;
 							boolean found = false;
 							Node tempNode = null;
-							for (Node n: curr_node.children) {
-//								System.out.println(n.name + " " + val);
-								//hardcoded for now
-								if (curr_feature_name.equals("age") || curr_feature_name.equals("education-num") 
-										|| curr_feature_name.equals("capital-gain") || curr_feature_name.equals("capital-loss") 
-										|| curr_feature_name.equals("hours-per-week")) {
+							for (Node n: curr_node.children) {	
+								if (this.numeric_feature_names.contains(curr_feature_name)) {
 									int tempD = Math.abs(Integer.parseInt(val)- Integer.parseInt(n.name));
 //									System.out.println("im in here: " + found);
 									if (Integer.parseInt(val) == Integer.parseInt(n.name)) {
 										curr_node = n;
 										found = true;
-										terminate = true;
+//										terminate = true;
 										break;
 									}
 									if (tempD < difference) {
 										difference = tempD;
 										tempNode = n;
+//										tempNode = new TNode(curr_node.name, 1, false);
 									}
 								}
 								else {
 									if (n.name.equals(val)) {
 										curr_node = n;
 										found = true;
-										terminate = true;
-										System.out.println(line + "  prediction: " + n.outcome);
-										if (chunks[13].trim().equals(n.outcome)) { total_correct+= 1.0; }
 										break;
 									}
 								}
 							} 
 							if (!found) { 
 								curr_node = tempNode;
-								terminate = true;
-								System.out.println(line + "  prediction: " + curr_node.outcome);
-								if (chunks[13].trim().equals(curr_node.outcome)) { total_correct+= 1.0; }
-//								System.out.println("avged out");
 							}
 						}
 					}
-					else {
-						System.out.println(line + "  prediction: " + curr_node.outcome);
-						if (chunks[13].trim().equals(curr_node.outcome)) { total_correct+= 1.0; }
+					else { //TNode
+//						System.out.println(line + "  prediction: " + curr_node.outcome);
+//						if (curr_node.isRG) {
+//							curr_node = this.initialFNodes.get(this.iF_index);
+//							this.iF_index++;
+//						}
+//						if (chunks[chunks.length - 1].trim().equals(curr_node.outcome)) { total_correct+= 1.0; }
+						System.out.println(curr_node.outcome);
 						terminate = true;
 //						System.out.println("IM here");
 					}
@@ -247,8 +250,8 @@ public class jw6dz extends Classifier {
 				}
 			
 			}
-			System.out.println("Total correct: " + total_correct + " out of " + total_lines);
-			System.out.println("% correct: " + total_correct/total_lines);
+//			System.out.println("Total correct: " + total_correct + " out of " + total_lines);
+//			System.out.println("% correct: " + total_correct/total_lines);
 		}
 		catch (IOException e) {
 			e.printStackTrace();
@@ -294,28 +297,31 @@ public class jw6dz extends Classifier {
 		public String name;
 		public double gain = 0.0;
 		public boolean isNumeric;
+		public int num_outcomes = 0;
 		public HashMap<String, ArrayList<Double>> levels = new HashMap<String, ArrayList<Double>>();
 		
 		//Non-Numeric Feature
-		public Feature(String n, String[] choices) {
+		public Feature(String n, String[] choices, int num_outs) {
 			this.name = n;
 			this.isNumeric = false;
+			this.num_outcomes = num_outs;
 			//Initiate Levels dictionary with the options of the Feature
 			for (int i = 1; i < choices.length; i++) {
 				createLevel(choices[i]);
 			}
 		}
 		//Numeric Feature
-		public Feature(String n) {
+		public Feature(String n, int num_outs) {
 			this.name = n;
+			this.num_outcomes = num_outs;
 			this.isNumeric = true;
 		}
 		
 		public void createLevel(String n) {
 			ArrayList<Double> tempA = new ArrayList<Double>();
-			tempA.add(0.0);
-			tempA.add(0.0);
-			tempA.add(0.0);
+			
+			for(int i = 0; i < this.num_outcomes + 1; i++) 
+				tempA.add(0.0);
 			this.levels.put(n, tempA);
 		}
 		
@@ -336,15 +342,10 @@ public class jw6dz extends Classifier {
 	}
 //////////////////////////////////////////////////////////////////////////////////////////
 	public class Choice {
-		public String value;
+		
 		public ArrayList<Feature> features;
 		public String[] all_choices;
 		public Integer[] nums_each_choice;
-		
-		public Choice(String v) {
-			this.value = v;
-			this.features = new ArrayList<Feature>();
-		}
 		
 		public Choice(String[] choices) {
 			this.all_choices = choices;
@@ -378,25 +379,10 @@ public class jw6dz extends Classifier {
 			return -1 * this.nums_each_choice[0]/total * log2(this.nums_each_choice[0]/total) - this.nums_each_choice[1]/total * log2(this.nums_each_choice[1]/total);
 		}
 	}
-//////////////////////////////////////////////////////////////////////////////////////////
-	public class NodeWorld {
-		public List<String> names_info;
-		public List<String> lines_info;
-		public FNode root;
-		public List<Integer> valid_indices;
-		public NodeWorld(List<String> n_info, List<String> l_info) {
-			names_info = n_info;
-			lines_info = l_info;
-			ArrayList<Integer> vi = new ArrayList<Integer>();
-			for (int i = 0; i < this.names_info.size() - 2; i++) 
-				vi.add(i);
-			this.valid_indices = vi;
-		}
-	}
-	
+
 //////////////////////////////////////////////////////////////////////////////////////////
 	public abstract class Node {
-		public NodeWorld homebase;
+		public boolean isRG;
 		public ArrayList<Node> children;
 		public String name;
 		public int total_num;
@@ -439,9 +425,9 @@ public class jw6dz extends Classifier {
 			
 			//remove f's index from valid indices
 			this.valid_indices.remove((Integer)feature_index);
-			System.out.println("###########FNode " + this.name + "##################");
-			System.out.println("valid indices: "+valid_indices);
-			
+//			System.out.println("###########FNode " + this.name + "##################");
+//			System.out.println("valid indices: "+valid_indices);
+//			
 			set_categorized_lines(f.levels);
 			
 			initializeChildren();
@@ -450,13 +436,10 @@ public class jw6dz extends Classifier {
 		public void initializeChildren() {
 			for(String s: categorized_lines.keySet()) {
 				SNode temp = new SNode(s, categorized_lines.get(s), this.valid_indices, this.invalid_feature_names, this.parent);
-				System.out.println(temp.toString());
+//				System.out.println(temp.toString());
 				this.children.add(temp);
 //				System.out.println(temp.toString1());
 			}
-//			for (Node n: this.children) {
-//				n.initializeChildren();
-//			}
 		}
 		
 		public void set_categorized_lines(HashMap<String, ArrayList<Double>> levels) {
@@ -558,17 +541,6 @@ public class jw6dz extends Classifier {
 							   //1: Terminate, Salary >50k
 							   //2: Terminate, Salary <=50k
 		
-		/*public SNode(String n, List<String> names, List<String> info) {
-			this.name = n;
-			this.names = names;
-			this.relevant_lines = info;
-			this.children = new ArrayList<Node>();
-			this.initiateSNode(); //initiates the chosen_one feature that carries on the blood line
-			
-			System.out.println("SNode " + n + " was built");
-			//FNode next = new FNode(this.chosen_one, this.names, this.relevant_lines);
-//			this.children.add(new FNode(chosen_one, this.names, this.relevant_lines));
-		}*/
 		public SNode(String n, List<String> info, List<Integer> indices, List<String> invalids, Feature p) {
 			SNodes ++;
 			this.name = n;
@@ -586,10 +558,10 @@ public class jw6dz extends Classifier {
 				String f_name = line[0];
 				Feature temp;
 				if (line[1].equals("numeric")) {
-					temp = new Feature(f_name);
+					temp = new Feature(f_name, choices.length);
 				}
 				else {
-					temp = new Feature(f_name, line);
+					temp = new Feature(f_name, line, choices.length);
 				}
 				this.the_choice.addFeature(temp);
 			}
@@ -600,32 +572,32 @@ public class jw6dz extends Classifier {
 		}
 		
 		public void initializeChildren() {
-			if (chosen_one.gain == 0.0) {
-				chosen_one = this.parent;
-				for (Entry<String, ArrayList<Double>> entry : chosen_one.levels.entrySet()) {
-				    String key = entry.getKey();
-				    ArrayList<Double> value = entry.getValue();
-				    int d = 1;
-				    if (value.get(0) == 0.0) { d = 2; }
-				    TNode tempT = new TNode(key, d);
-				    this.children.add(tempT);
-				}
-			}
-			else {
-				FNode tempF = new FNode(this.information, this.valid_indices, this.chosen_one, this.invalid_feature_names);
-				this.children.add(tempF);
-				chosen_ones.add(chosen_one);
-			}
+//			if (chosen_one.gain == 0.0) {
+//				chosen_one = this.parent;
+//				for (Entry<String, ArrayList<Double>> entry : chosen_one.levels.entrySet()) {
+//				    String key = entry.getKey();
+//				    ArrayList<Double> value = entry.getValue();
+//				    int d = 1;
+//				    if (value.get(0) == 0.0) { d = 2; }
+//				    TNode tempT = new TNode(key, d);
+//				    this.children.add(tempT);
+//				}
+//			}
+//			else {
+//				FNode tempF = new FNode(this.information, this.valid_indices, this.chosen_one, this.invalid_feature_names);
+//				this.children.add(tempF);
+//				chosen_ones.add(chosen_one);
+//			}
 		}
 		
 		public void doCalculations() {
 			int num_data  = this.information.size();
-			System.out.println("there are this many rows of data: " + num_data);
-			System.out.println(invalid_feature_names.toString());
+//			System.out.println("there are this many rows of data: " + num_data);
+//			System.out.println(invalid_feature_names.toString());
 			for (int i = 0; i < this.information.size(); i++) {
 				String[] choices = this.information.get(i).split("\\s+");
 				String line_result = choices[choices.length-1];
-				if (num_data <= 5) System.out.println(this.information.get(i));
+//				if (num_data <= 5) System.out.println(this.information.get(i));
 				int index = 0;
 				for (int z = 0; z < this.the_choice.all_choices.length; z++) {
 					if (this.the_choice.all_choices[z].equals(line_result)) {
@@ -683,9 +655,9 @@ public class jw6dz extends Classifier {
 //			System.out.println("Im here! num_data: " + num_data + " SNode name: " + this.name);
 			for(int i = 0; i < this.the_choice.features.size(); i++) {
 				if (!(this.invalid_feature_names.contains(this.the_choice.features.get(i).name))) {
-					System.out.println(this.the_choice.features.get(i).name +" is not in invalid features!");
+//					System.out.println(this.the_choice.features.get(i).name +" is not in invalid features!");
 					chosen_one = this.the_choice.features.get(i);
-					System.out.println("the chosen feature is: " + chosen_one.name + " with gain of " + chosen_one.gain);
+//					System.out.println("the chosen feature is: " + chosen_one.name + " with gain of " + chosen_one.gain);
 //					System.out.println("hi");
 					break;
 				}
@@ -695,13 +667,13 @@ public class jw6dz extends Classifier {
 //			if (chosen_one == null || valid_indices.size() == 0 || chosen_one.gain == 0.0) {
 			if (valid_indices.size()==0) {
 				chosen_one = this.parent;
-				System.out.println("the chosen one of " + this.name + " is parent " + this.parent.name);
+//				System.out.println("the chosen one of " + this.name + " is parent " + this.parent.name);
 				for (Entry<String, ArrayList<Double>> entry : chosen_one.levels.entrySet()) {
 				    String key = entry.getKey();
 				    ArrayList<Double> value = entry.getValue();
 				    double d = 1;
 				    if (value.get(0) < value.get(1) ) { d = 2; }
-				    TNode tempT = new TNode(key, (int)d);
+				    TNode tempT = new TNode(key, (int)d, false);
 				    this.children.add(tempT);
 				}
 				return;
@@ -711,25 +683,25 @@ public class jw6dz extends Classifier {
 				if (num_data > 0) {
 					double npos = 0; double nneg = 0;
 					for (Entry<String, ArrayList<Double>> entry : chosen_one.levels.entrySet()) {
-					    String key = entry.getKey();
 					    ArrayList<Double> value = entry.getValue();
 					    npos += value.get(0);
 					    nneg += value.get(1);
 					}
 					TNode t;
 					if (npos > nneg) 
-						 t = new TNode(this.name, 1);
+						 t = new TNode(this.name, 1, false);
 					else
-						 t = new TNode(this.name, 2);
-					System.out.println(t);
+						 t = new TNode(this.name, 2, false);
+//					System.out.println(t);
 					this.children.add(t);
 					return;
 				}
 				else {
+//					System.out.println("Im here! before reandomly generating tnode value");
 					Random random = new Random();
-//					TNode t = new TNode(this.name, random.nextInt(2 - 1 + 1) + 1);
-					TNode t = new TNode(this.name, 2);
-					System.out.println(t);
+					TNode t = new TNode(this.name, random.nextInt(2 - 1 + 1) + 1, true);
+//					TNode t = new TNode(this.name, 2, true);
+//					System.out.println(t);
 					this.children.add(t);
 					return;
 				}
@@ -737,7 +709,7 @@ public class jw6dz extends Classifier {
 	
 //			else {
 //				if (FNodes < 3) {
-					System.out.println("Building FNode " + this.chosen_one.name + " from SNode: " + this.name);
+//					System.out.println("Building FNode " + this.chosen_one.name + " from SNode: " + this.name);
 					FNode tempF = new FNode(this.information, this.valid_indices, this.chosen_one,
 							this.invalid_feature_names);
 					this.children.add(tempF);
@@ -760,20 +732,24 @@ public class jw6dz extends Classifier {
 	}
 	
 	public class TNode extends Node {
-		
-		public TNode(String n, int d) {
+		public TNode(String n, int d, boolean i) {
+			isRG = i;
 			TNodes ++;
 			this.name = n;
 			this.type = "TNode";
-			outcome = ">50K";
-			if (d == 2) { outcome = "<=50K"; }
-//			outcome = "<=50K";
-//			if (d == 2) { outcome = ">50K"; }
+			outcome = the_choice.all_choices[0];
+			
+			for (int b = 0; b < the_choice.all_choices.length; b++) {
+				if (d == b+1) {
+					outcome = the_choice.all_choices[b];
+				}
+			}
+//			if (d == 2) { outcome = "<=50K"; }
 		}
+		
 		@Override
 		public void initializeChildren() {
-			// TODO Auto-generated method stub
-			
+
 		}
 		public String toString() {
 			return "TNode: " + this.name + " outcome: " + this.outcome; 
@@ -781,10 +757,12 @@ public class jw6dz extends Classifier {
 	}
 	
 	public static void main(String[] args) {
-		jw6dz hi = new jw6dz("src/census.names");
-		hi.train("src/practice");
-		hi.makePredictions("src/practiceTest");
-		//System.out.println(hi.the_choice.toString());
+		jw6dz hi = new jw6dz("src/changed_census.names");
+		hi.train("src/changed_census.train.1000");
+		hi.makePredictions("src/changed_census.test");
+//		jw6dz hi = new jw6dz("src/census.names");
+//		hi.train("src/practiceTrain1");
+//		hi.makePredictions("src/practiceTest1");
 	}
 	
 }
