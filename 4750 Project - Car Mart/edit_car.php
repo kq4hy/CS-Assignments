@@ -25,7 +25,12 @@
       Total Mileage: <input type = "text" name = "mileage"  value = "<?php echo $arr[3] ?>" size = "10">miles</br></br>
       Miles Per Gallon (mpg) in City: <input type = "text" name = "mpg_city"  value = "<?php echo $arr[4] ?>" size = "10">miles</br></br>
       Miles Per Gallon (mpg) on Highway: <input type = "text" name = "mpg_highway"  value = "<?php echo $arr[5] ?>" size = "10">miles</br></br>
-      Condition: <input type = "text" name = "condition"  value = "<?php echo $arr[7] ?>" size = "20"></br></br>
+      Condition: <select name = "condition">
+        <option value = "Poor">Poor</option>
+        <option value = "Okay">Okay</option>
+        <option value = "Good">Good</option>
+        <option value = "Excellent">Excellent</option>
+      </select></br></br>
       Price: $<input type = "text" name = "price"  value = "<?php echo $arr[6] ?>" size = "10"></br></br>
       Additional Comments: </br><textarea name = "comments" cols = "50" rows = "5"><?php echo $arr[8] ?></textarea></br></br>
       <input type = "submit" name = "sell" value = "Update">

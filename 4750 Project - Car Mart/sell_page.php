@@ -10,7 +10,12 @@ Please note that your car will automatically be associated to your dealership if
   Total Mileage: <input type = "text" name = "mileage" size = "10">miles</br></br>
   Miles Per Gallon (mpg) in City: <input type = "text" name = "mpg_city" size = "10">miles</br></br>
   Miles Per Gallon (mpg) on Highway: <input type = "text" name = "mpg_highway" size = "10">miles</br></br>
-  Condition: <input type = "text" name = "condition" size = "20"></br></br>
+  Condition: <select name = "condition">
+    <option value = "poor">Poor</option>
+    <option value = "okay">Okay</option>
+    <option value = "good">Good</option>
+    <option value = "excellent">Excellent</option>
+  </select></br></br>
   Price: $<input type = "text" name = "price" size = "10"></br></br>
   Additional Comments: </br><textarea name = "comments" cols = "50" rows = "5"></textarea></br></br>
   <input type = "submit" name = "sell" value = "Post Listing">
