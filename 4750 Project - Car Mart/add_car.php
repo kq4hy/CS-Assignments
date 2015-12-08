@@ -1,7 +1,7 @@
 <title>Car Information</title>
 <h3><center>Car Information</center></h3>
 <center>Please view the information below regarding the car you just clicked.</br>
-Feel free to contact the seller or purchase this car. </br></br>
+Feel free to contact the seller or add this car to your cart. </br></br>
 
 <?php
   session_start();
@@ -36,11 +36,12 @@ Feel free to contact the seller or purchase this car. </br></br>
     Address: <?php echo $arr[13] ?></br></br>
 
     <?php if($arr[14] == 0) { ?>
-      <a "location . href = 'process_buy.php?var= <?php echo $inv_id ?>'">Purchase</br></br>
+      <a "location . href = 'process_add.php?var= <?php echo $inv_id ?>'">Add to Cart</br></br>
     <?php } else if($arr[14] == 1) { ?>
-      This car has already been purchased by you! Click back to continue shopping. </br></br>
+      This car has already been purchased! Click back to continue shopping.</br></br>
     <?php } ?>
-    <form action = "cart.php">
+
+    <form action = "buyer_main.php">
       <input type = "submit" value = "Go Back">
     </form></center>
 

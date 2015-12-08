@@ -93,6 +93,18 @@
 		}
 	}
 
+	$cars_file = file('cars.txt');
+	foreach($cars_file as $str) {
+		$str = rtrim($str);
+		$chunks = explode("#", $str);
+		$row_info = array();
+		foreach($chunks as $entry)
+			$row_info[] = str_replace("'", "''", $entry);
+		$db -> query("insert into cars values('$row_info[1]', '$row_info[2]', '$row_info[3]', '$row_info[4]', '$row_info[5]', '$row_info[6]', '$row_info[7]')") or die ("Invalid: " . $db -> error);
+		$db -> query("insert into inventory values('$row_info[1]', '$row_info[8]', '0', '$row_info[9]', ' ')") or die ("Invalid: " . $db -> error);
+		$db -> query("insert into owns values('$row_info[0]', '$row_info[1]')") or die ("Invalid: " . $db -> error);
+		$db -> query("insert into contains values('$row_info[1]', '$row_info[1]')") or die ("Invalid: " . $db -> error);
+	}
 
 	$db -> close();
 	header("Location: login.php");

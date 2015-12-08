@@ -14,7 +14,7 @@
     if ($db -> connect_error)
       die("Connection failed: " . $db -> connect_error);
 
-    $result = $db -> query("select make, model, year, miles, mpg_city, mpg_highway, price, car_condition, comments
+    $result = $db -> query("select make, model, year, miles, mpg_city, mpg_highway, price, car_condition, comments, bought
     from inventory natural join contains natural join cars where inv_id = '$inv_id'") or die("Invalid: " . $db -> error);
     $arr = $result -> fetch_array(); ?>
     <center>
@@ -33,7 +33,12 @@
       </select></br></br>
       Price: $<input type = "text" name = "price"  value = "<?php echo $arr[6] ?>" size = "10"></br></br>
       Additional Comments: </br><textarea name = "comments" cols = "50" rows = "5"><?php echo $arr[8] ?></textarea></br></br>
-      <input type = "submit" name = "sell" value = "Update">
+
+      <?php if($arr[9] == 0) { ?>
+        <input type = "submit" name = "sell" value = "Update">
+      <?php } else if($arr[9] == 1) { ?>
+        This car has already been purchased! Click back to view the listings.
+      <?php } ?>
     </form>
   <?php } ?>
 

@@ -33,7 +33,7 @@
       $_SESSION['minimum'] = $minimum;
       $_SESSION['maximum'] = $maximum;
       $db -> query("update buyers set min_price = '$minimum', max_price = '$maximum', completed = '1' where user_id = '$curr_id'");
-      create_table();
+      header("Location: buyer_main.php");
     }
   } else {
     $completion = $db -> query("select completed, user_id, min_price, max_price from buyers natural join is_buyer where binary user = '$curr_user'");
@@ -50,59 +50,61 @@
         <input type = "submit" value = "Submit Information"></br>
       </form>
     <?php } else {
-      create_table();
-    }
-  } ?>
-
-  <h3><center>Car Inventory</center></h3>
-  <table width = 85% id = "table" align = center border = "1">
-    <tr align = center>
-      <th width = 20%>Car Information</th>
-      <th width = 15%>Condition</th>
-      <th width = 10%>Price</th>
-      <th width = 20%>Seller</th>
-      <th width = 20%>Bought</th>
-    </tr>
-
-    <?php if(isset($_SESSION['maximum']) && isset($_SESSION['minimum'])) {
-      $max = $_SESSION['maximum'];
-      $min = $_SESSION['minimum'];
-      $result = $db -> query("select distinct inv_id, make, model, year, car_condition, price, first_name, last_name, bought
-      from inventory natural join owns natural join users natural join sellers natural join cars natural join contains
-      natural join is_seller where price >= '$min' and price <= '$max'") or die("Invalid: " . $db -> error);
+      $result = $db -> query("select * from has_cars natural join has natural join cart where user_id = '$curr_id'") or die("Invalid: " . $db -> error);
       $num_rows = $result -> num_rows;
-    	$row = $result -> fetch_array();
-    	$num_fields = sizeof($row);
-    	for ($row_num = 0; $row_num < $num_rows; $row_num++) {
-    		reset($row); ?>
-    		<tr align = 'center'>
-          <td><a "location . href = 'buy_car.php?var=<?php echo $row[0] ?>'"><?php echo $row[1]." ".$row[2]." ".$row[3] ?></td>
-          <td><?php echo $row[4] ?></td>
-          <td>$<?php echo $row[5] ?></td>
-          <td><?php echo $row[6]." ".$row[7] ?></td>
-    		  <?php if($row[7] == 0)
-            echo "<td>Not yet bought</td>";
-          else if($row[7] == 1)
-            echo "<td>Sold!</td>";
-    	  echo "</tr>";
-    		$row = $result -> fetch_array();
+      create_table($num_rows); ?>
+
+      <h3><center>Car Inventory</center></h3>
+      <table width = 85% id = "table" align = center border = "1">
+        <tr align = center>
+          <th width = 20%>Car Information</th>
+          <th width = 15%>Condition</th>
+          <th width = 10%>Price</th>
+          <th width = 20%>Seller</th>
+          <th width = 20%>Bought</th>
+        </tr>
+
+        <?php if(isset($_SESSION['maximum']) && isset($_SESSION['minimum'])) {
+          $max = $_SESSION['maximum'];
+          $min = $_SESSION['minimum'];
+          $result = $db -> query("select distinct inv_id, make, model, year, car_condition, price, first_name, last_name, inventory.bought
+          from inventory natural join owns natural join users natural join sellers natural join cars natural join contains
+          natural join is_seller where price >= '$min' and price <= '$max'") or die("Invalid: " . $db -> error);
+          $num_rows = $result -> num_rows;
+        	$row = $result -> fetch_array();
+        	$num_fields = sizeof($row);
+        	for ($row_num = 0; $row_num < $num_rows; $row_num++) {
+        		reset($row); ?>
+        		<tr align = 'center'>
+              <td><a "location . href = 'add_car.php?var=<?php echo $row[0] ?>'"><?php echo $row[1]." ".$row[2]." ".$row[3] ?></td>
+              <td><?php echo $row[4] ?></td>
+              <td>$<?php echo $row[5] ?></td>
+              <td><?php echo $row[6]." ".$row[7] ?></td>
+        		  <?php if($row[8] == 0)
+                echo "<td>Not yet bought</td>";
+              else if($row[8] == 1)
+                echo "<td>Sold!</td>";
+        	  echo "</tr>";
+        		$row = $result -> fetch_array();
+          } ?>
+          </table></br></br>
+        <?php }
       } ?>
-      </table></br></br>
-    <?php } ?>
 
   <form action = "login.php"><center>
     <input type = "submit" value = "Log Out">
   </center></form>
 
+  <?php } ?>
+
 <?php
-  function create_table() { ?>
+  function create_table($rows) { ?>
     <center>As a buyer, you can perform the below actions!</center></br>
     <title>Seller Main Page</title>
     <table width = 50% id = "table" align = center >
       <tr align = center>
-        <th width = 25%><a "location . href = 'buy_page.php'">Buy</th>
         <th width = 25%><a "location . href = 'profile.php?var=buyer'">Profile</th>
-        <th width = 25%><a "location . href = 'cart.php'">Cart</th>
+        <th width = 25%><a "location . href = 'cart.php'">Cart(<?php echo $rows ?>)</th>
       </tr>
     </table></br>
   <?php }

@@ -1,0 +1,10 @@
+1#1#Aston Martin#DB9#2015#10000#13#19#100000#Excellent
+2#2#Aston Martin#Riptide#2015#20000#14#22#125000#Good
+3#3#Audi#A8#2013#50000#18#28#35000#Okay
+3#4#BMW#328i#2012#100000#23#34#15000#Excellent
+2#5#Chevrolet#Camaro#2013#85000#19#30#10000#Poor
+1#6#Maserati#Quattroporte#2010#250000#11#18#42000#Good
+2#7#Mercedes Benz#E 550#2009#110000#14#22#55000#Good
+2#8#Nissan#Infiniti G#2012#189000#20#29#10000#Okay
+3#9#Nissan#Altima#2015#10000#27#38#10000#Excellent
+3#10#Lexus#GS 350#2015#32500#19#29#28000#Poor
