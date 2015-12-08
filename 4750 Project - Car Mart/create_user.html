@@ -1,0 +1,19 @@
+<title>Create New User</title>
+<h3><center>Create New User</center></h3>
+<center>Please fill out the information below to create a new account.</br></br>
+  <form action = "process_new_user.php" method = "POST">
+    User Name: <input type = "text" name = "user" size = "20"></br></br>
+    Password: <input type = "password" name = "password" size = "20"></br></br>
+    Confirm Password: <input type = "password" name = "conf_pass" size = "20"></br></br>
+    First Name: <input type = "text" name = "first_name" size = "20"></br></br>
+    Last Name: <input type = "text" name = "last_name" size = "20"></br></br>
+    Email: <input type = "text" name = "email" size = "20"></br></br>
+    User Type: <select name = "type">
+      <option value = "buyer">Buyer</option>
+      <option value = "seller">Seller</option>
+    </select></br></br>
+    <input type = "submit" value = "Sign Up">
+  </form>
+  <form action = "login.php">
+    <input type = "submit" value = "Go Back">
+  </form>
