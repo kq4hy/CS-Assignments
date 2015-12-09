@@ -52,5 +52,5 @@ Cart: cart_id -> current, bought
 
 All RHS entities are dependent on themselves and all LHS entities are superkeys and the above is already the canonical form. Thus, the database is in 3NF based on the above relations. Going even further, the relationship sets that are created only contain two foreign keys, so they are also 3NF as well.  
 
-
+Rest will be done in word. 
 
